@@ -313,38 +313,40 @@ export default function RaceComparison() {
             flexDirection: 'column',
             boxSizing: 'border-box'
         }}>
-            {/* Header - just logo */}
+            {/* Header - logo left, toggle centered */}
             <header style={{
-                marginBottom: '12px',
+                marginBottom: '8px',
                 paddingLeft: '8px',
-                flexShrink: 0
+                paddingRight: '8px',
+                paddingTop: '4px',
+                flexShrink: 0,
+                display: 'grid',
+                gridTemplateColumns: 'minmax(180px, 1fr) auto minmax(180px, 1fr)',
+                alignItems: 'center'
             }}>
-                <img
-                    src="/LOGO-NZ-PNG.png"
-                    alt="Noskrien Ziemu"
-                    style={{ height: '40px', width: 'auto', maxWidth: '180px', objectFit: 'contain' }}
-                />
+                <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '4px' }}>
+                    <img
+                        src="/LOGO-NZ-PNG.png"
+                        alt="Noskrien Ziemu"
+                        style={{ height: '40px', width: 'auto', maxWidth: '180px', objectFit: 'contain' }}
+                    />
+                </div>
+                <CategoryToggle value={category} onChange={setCategory} />
+                <div /> {/* Spacer for centering toggle */}
             </header>
 
             {/* Participant Selection */}
             <div style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '10px',
+                gap: '8px',
                 maxWidth: '800px',
                 margin: '0 auto',
                 width: '100%',
-                marginBottom: '10px',
+                marginBottom: '4px',
                 padding: '0 16px',
                 flexShrink: 0
             }}>
-                {/* Category Toggle - above search */}
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'center'
-                }}>
-                    <CategoryToggle value={category} onChange={setCategory} />
-                </div>
 
                 {/* Search inputs row */}
                 <div style={{
@@ -490,7 +492,7 @@ export default function RaceComparison() {
                         width: '100%',
                         background: 'white',
                         borderRadius: '16px',
-                        padding: '12px 20px 20px',
+                        padding: '8px 12px 12px',
                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
                         border: '1px solid #E2E8F0',
                         minHeight: 0,
@@ -501,7 +503,7 @@ export default function RaceComparison() {
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart
                                     data={chartData}
-                                    margin={{ top: 20, right: 30, left: 50, bottom: 70 }}
+                                    margin={{ top: 20, right: 30, left: 50, bottom: 40 }}
                                 >
                                     <defs>
                                         <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -539,9 +541,9 @@ export default function RaceComparison() {
                                         tick={{ fill: '#64748B', fontSize: 11 }}
                                         tickLine={{ stroke: '#CBD5E1' }}
                                         axisLine={{ stroke: '#CBD5E1' }}
-                                        angle={-45}
+                                        angle={-30}
                                         textAnchor="end"
-                                        height={70}
+                                        height={45}
                                         interval={0}
                                     />
 
