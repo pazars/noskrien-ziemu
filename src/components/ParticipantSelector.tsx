@@ -32,7 +32,7 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
         const fetchParticipants = async () => {
             setLoading(true);
             try {
-                const response = await fetch(`http://localhost:8788/api/results?name=${encodeURIComponent(query)}`);
+                const response = await fetch(`http://localhost:8787/api/results?name=${encodeURIComponent(query)}`);
                 const data = await response.json();
                 if (Array.isArray(data)) {
                     setResults(data);
