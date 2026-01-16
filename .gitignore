@@ -29,3 +29,6 @@ data
 results.json
 import_data.sql
 raceplot.jsx
+
+.playwright-mcp
+.claude
