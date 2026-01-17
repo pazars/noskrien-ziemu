@@ -3,6 +3,22 @@ export interface Env {
     DB: D1Database;
 }
 
+// Helper function to normalize Latvian characters for search
+function normalizeLatvian(text: string): string {
+    return text
+        .replace(/ā/gi, 'a')
+        .replace(/č/gi, 'c')
+        .replace(/ē/gi, 'e')
+        .replace(/ģ/gi, 'g')
+        .replace(/ī/gi, 'i')
+        .replace(/ķ/gi, 'k')
+        .replace(/ļ/gi, 'l')
+        .replace(/ņ/gi, 'n')
+        .replace(/š/gi, 's')
+        .replace(/ū/gi, 'u')
+        .replace(/ž/gi, 'z');
+}
+
 export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         const url = new URL(request.url);
@@ -26,17 +42,27 @@ export default {
             // Return DISTINCT names matching query
             // Group by name/gender to avoid duplicates
             // We select one ID just to have a key, but frontend should rely on name
-            // COLLATE NOCASE ensures case-insensitive search
+            // Search both original and normalized (Latvian-insensitive) versions
+            const normalizedQuery = normalizeLatvian(name);
             const query = `
                 SELECT MIN(id) as id, name, gender
                 FROM participants
-                WHERE name LIKE ? COLLATE NOCASE
+                WHERE (
+                    name LIKE ? COLLATE NOCASE
+                    OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                        LOWER(name),
+                        'ā', 'a'), 'č', 'c'), 'ē', 'e'), 'ģ', 'g'), 'ī', 'i'),
+                        'ķ', 'k'), 'ļ', 'l'), 'ņ', 'n'), 'š', 's'), 'ū', 'u'), 'ž', 'z')
+                    LIKE ? COLLATE NOCASE
+                )
                 GROUP BY name, gender
                 LIMIT 10
             `;
 
             try {
-                const { results } = await env.DB.prepare(query).bind(`%${name}%`).all();
+                const { results } = await env.DB.prepare(query)
+                    .bind(`%${name}%`, `%${normalizedQuery}%`)
+                    .all();
                 return Response.json(results, { headers });
             } catch (e) {
                 return Response.json({ error: (e as Error).message }, { status: 500, headers });
