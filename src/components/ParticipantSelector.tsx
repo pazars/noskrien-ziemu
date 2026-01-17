@@ -1,10 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, X } from 'lucide-react';
 
+export interface Participant {
+    id: number;
+    name: string;
+    gender: string;
+}
+
 interface ComponentProps {
     label: string;
-    onSelect: (name: string | null) => void;
-    selectedName: string | null;
+    onSelect: (participant: Participant | null) => void;
+    selectedParticipant: Participant | null;
     accentColor?: string;
     distance?: string;
 }
@@ -15,7 +21,7 @@ interface SearchResult {
     gender: string;
 }
 
-export default function ParticipantSelector({ label, onSelect, selectedName, accentColor = '#00AEEF', distance }: ComponentProps) {
+export default function ParticipantSelector({ label, onSelect, selectedParticipant, accentColor = '#00AEEF', distance }: ComponentProps) {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isOpen, setIsOpen] = useState(false);
@@ -94,7 +100,7 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
             case 'Enter':
                 e.preventDefault();
                 if (highlightedIndex >= 0 && results[highlightedIndex]) {
-                    onSelect(results[highlightedIndex].name);
+                    onSelect(results[highlightedIndex]);
                     setIsOpen(false);
                     setQuery('');
                 }
@@ -132,7 +138,7 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
             {/* Input Container */}
             <div className="relative group">
                 {/* Selected state - matches input styling */}
-                {selectedName ? (
+                {selectedParticipant ? (
                     <div
                         style={{
                             width: '100%',
@@ -151,7 +157,7 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
                             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
                         }}
                     >
-                        <span style={{ flex: 1, fontWeight: 500 }}>{selectedName}</span>
+                        <span style={{ flex: 1, fontWeight: 500 }}>{selectedParticipant.name}</span>
                         <button
                             style={{
                                 position: 'absolute',
@@ -284,7 +290,7 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
                 )}
 
                 {/* Dropdown */}
-                {isOpen && results.length > 0 && !selectedName && (
+                {isOpen && results.length > 0 && !selectedParticipant && (
                     <div
                         className="absolute z-50 w-full mt-2 py-2 rounded-xl shadow-lg overflow-hidden animate-fade-in-up"
                         style={{
@@ -308,7 +314,7 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
                                     transition: 'all 0.15s'
                                 }}
                                 onClick={() => {
-                                    onSelect(p.name);
+                                    onSelect(p);
                                     setIsOpen(false);
                                     setQuery('');
                                 }}
@@ -321,7 +327,7 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
                 )}
 
                 {/* Empty state */}
-                {isOpen && query.length >= 2 && results.length === 0 && !loading && !selectedName && (
+                {isOpen && query.length >= 2 && results.length === 0 && !loading && !selectedParticipant && (
                     <div
                         className="absolute z-50 w-full mt-2 py-6 px-4 rounded-xl text-center animate-fade-in-up"
                         style={{

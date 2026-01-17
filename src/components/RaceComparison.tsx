@@ -3,7 +3,7 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, ReferenceLine
 } from 'recharts';
-import ParticipantSelector from './ParticipantSelector';
+import ParticipantSelector, { type Participant } from './ParticipantSelector';
 import { compareRaces, type HistoryResponse } from '../utils/comparison';
 import { Snowflake, Minus, Loader2 } from 'lucide-react';
 
@@ -312,8 +312,8 @@ const StatsSummary = ({ p1Name, p2Name, chartData }: { p1Name: string; p2Name: s
 };
 
 export default function RaceComparison() {
-    const [p1Name, setP1Name] = useState<string | null>(null);
-    const [p2Name, setP2Name] = useState<string | null>(null);
+    const [p1, setP1] = useState<Participant | null>(null);
+    const [p2, setP2] = useState<Participant | null>(null);
     const [category, setCategory] = useState<string>('Tautas');
     const [chartData, setChartData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -359,7 +359,7 @@ export default function RaceComparison() {
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!p1Name || !p2Name) {
+            if (!p1 || !p2) {
                 setChartData([]);
                 setDisplayP1Name(null);
                 setDisplayP2Name(null);
@@ -370,13 +370,13 @@ export default function RaceComparison() {
             setLoading(true);
             try {
                 const [hist1, hist2] = await Promise.all([
-                    fetch(`/api/history?name=${encodeURIComponent(p1Name)}`).then(res => res.json()) as Promise<HistoryResponse>,
-                    fetch(`/api/history?name=${encodeURIComponent(p2Name)}`).then(res => res.json()) as Promise<HistoryResponse>
+                    fetch(`/api/history?id=${p1.id}`).then(res => res.json()) as Promise<HistoryResponse>,
+                    fetch(`/api/history?id=${p2.id}`).then(res => res.json()) as Promise<HistoryResponse>
                 ]);
 
                 let commonRaces = compareRaces(hist1, hist2, category);
-                let finalP1Name = p1Name;
-                let finalP2Name = p2Name;
+                let finalP1Name = p1.name;
+                let finalP2Name = p2.name;
                 let swapped = false;
 
                 // Determine if we should swap runners so the faster one (more wins) has positive y-axis
@@ -395,8 +395,8 @@ export default function RaceComparison() {
                             diff: -race.diff
                         }));
                         // Swap names as well
-                        finalP1Name = p2Name;
-                        finalP2Name = p1Name;
+                        finalP1Name = p2.name;
+                        finalP2Name = p1.name;
                         swapped = true;
                     }
                 }
@@ -413,7 +413,7 @@ export default function RaceComparison() {
         };
 
         fetchData();
-    }, [p1Name, p2Name, category]);
+    }, [p1?.id, p2?.id, category]);
 
 
     return (
@@ -492,8 +492,8 @@ export default function RaceComparison() {
                     <div style={{ flex: 1 }}>
                         <ParticipantSelector
                             label="1. dalībnieks"
-                            onSelect={setP1Name}
-                            selectedName={p1Name}
+                            onSelect={setP1}
+                            selectedParticipant={p1}
                             accentColor="#00AEEF"
                             distance={category}
                         />
@@ -520,8 +520,8 @@ export default function RaceComparison() {
                     <div style={{ flex: 1 }}>
                         <ParticipantSelector
                             label="2. dalībnieks"
-                            onSelect={setP2Name}
-                            selectedName={p2Name}
+                            onSelect={setP2}
+                            selectedParticipant={p2}
                             accentColor="#F97316"
                             distance={category}
                         />
@@ -550,7 +550,7 @@ export default function RaceComparison() {
             )}
 
             {/* Empty State */}
-            {!loading && (!p1Name || !p2Name) && (
+            {!loading && (!p1 || !p2) && (
                 <div style={{
                     flex: 1,
                     display: 'flex',
@@ -581,7 +581,7 @@ export default function RaceComparison() {
             )}
 
             {/* No Common Races */}
-            {!loading && p1Name && p2Name && chartData.length === 0 && (
+            {!loading && p1 && p2 && chartData.length === 0 && (
                 <div style={{
                     flex: 1,
                     display: 'flex',
@@ -606,7 +606,7 @@ export default function RaceComparison() {
                         Nav kopīgu skrējienu
                     </h3>
                     <p style={{ color: '#64748B', maxWidth: '400px' }}>
-                        {displayP1Name || p1Name} un {displayP2Name || p2Name} nav piedalījušies kopīgos {category} klases skrējienos.
+                        {displayP1Name || p1?.name} un {displayP2Name || p2?.name} nav piedalījušies kopīgos {category} klases skrējienos.
                     </p>
                 </div>
             )}
@@ -620,7 +620,7 @@ export default function RaceComparison() {
                     minHeight: 0
                 }}>
                     {/* Stats Summary */}
-                    <StatsSummary p1Name={displayP1Name || p1Name!} p2Name={displayP2Name || p2Name!} chartData={chartData} />
+                    <StatsSummary p1Name={displayP1Name || p1!.name} p2Name={displayP2Name || p2!.name} chartData={chartData} />
 
                     {/* Plot Mode Toggle - above chart container */}
                     <div style={{
@@ -753,7 +753,7 @@ export default function RaceComparison() {
                                     )}
 
                                     <Tooltip
-                                        content={<CustomTooltip p1Name={displayP1Name || p1Name!} p2Name={displayP2Name || p2Name!} originalP1Name={p1Name} originalP2Name={p2Name} allSeasons={allSeasons} />}
+                                        content={<CustomTooltip p1Name={displayP1Name || p1!.name} p2Name={displayP2Name || p2!.name} originalP1Name={p1!.name} originalP2Name={p2!.name} allSeasons={allSeasons} />}
                                         cursor={{ stroke: '#94A3B8', strokeDasharray: '4 4' }}
                                     />
 

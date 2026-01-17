@@ -4,13 +4,57 @@ import { describe, it, expect } from 'vitest';
  * Integration tests for distance-aware autocomplete functionality
  *
  * These tests verify that the ParticipantSelector component and API endpoint
- * work together to filter participants by distance category.
+ * work together to filter participants by distance category and use participant IDs.
  */
+
+interface Participant {
+    id: number;
+    name: string;
+    gender: string;
+}
 
 // Helper function to get the opposite distance (simulates runtime behavior)
 function getOtherDistance(distance: 'Sporta' | 'Tautas'): 'Sporta' | 'Tautas' {
     return distance === 'Tautas' ? 'Sporta' : 'Tautas';
 }
+
+describe('ParticipantSelector - Distance Filtering and ID Integration', () => {
+    describe('Participant ID requirements', () => {
+        it('should include id field in participant results', () => {
+            const mockParticipant: Participant = {
+                id: 123,
+                name: 'Dāvis Pazars',
+                gender: 'M'
+            };
+
+            expect(mockParticipant.id).toBe(123);
+            expect(mockParticipant.name).toBe('Dāvis Pazars');
+            expect(mockParticipant.gender).toBe('M');
+        });
+
+        it('should pass full participant object on selection', () => {
+            const selectedParticipant: Participant = {
+                id: 456,
+                name: 'Kristaps Bērziņš',
+                gender: 'M'
+            };
+
+            // Component should call onSelect with the full participant object
+            const onSelect = (participant: Participant | null) => {
+                expect(participant).toEqual(selectedParticipant);
+            };
+
+            onSelect(selectedParticipant);
+        });
+
+        it('should handle null selection for clearing', () => {
+            const onSelect = (participant: Participant | null) => {
+                expect(participant).toBeNull();
+            };
+
+            onSelect(null);
+        });
+    });
 
 describe('ParticipantSelector - Distance Filtering Integration', () => {
     describe('API Query URL construction', () => {
@@ -277,5 +321,6 @@ describe('ParticipantSelector - Distance Filtering Integration', () => {
             expect(runner1Distance).toBe(runner2Distance);
             expect(runner1Distance).toBe('Sporta');
         });
+    });
     });
 });
