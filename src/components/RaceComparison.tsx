@@ -38,11 +38,15 @@ const formatPaceDiff = (diff: number) => {
 };
 
 // Custom tooltip
-const CustomTooltip = ({ active, payload, p1Name, p2Name, allSeasons }: any) => {
+const CustomTooltip = ({ active, payload, p1Name, p2Name, originalP1Name, originalP2Name, allSeasons }: any) => {
     if (!active || !payload || !payload.length) return null;
 
     const data = payload[0].payload;
     const diff = data.diff;
+
+    // Determine colors based on which original person each display name corresponds to
+    const p1Color = p1Name === originalP1Name ? '#00AEEF' : '#F97316';
+    const p2Color = p2Name === originalP2Name ? '#F97316' : '#00AEEF';
 
     return (
         <div style={{
@@ -60,11 +64,11 @@ const CustomTooltip = ({ active, payload, p1Name, p2Name, allSeasons }: any) => 
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '14px' }}>
-                <span style={{ color: '#00AEEF', fontWeight: 500 }}>{p1Name}</span>
+                <span style={{ color: p1Color, fontWeight: 500 }}>{p1Name}</span>
                 <span style={{ color: '#1E293B', fontFamily: 'JetBrains Mono, monospace', fontWeight: 500 }}>{data.p1Time}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '14px' }}>
-                <span style={{ color: '#F97316', fontWeight: 500 }}>{p2Name}</span>
+                <span style={{ color: p2Color, fontWeight: 500 }}>{p2Name}</span>
                 <span style={{ color: '#1E293B', fontFamily: 'JetBrains Mono, monospace', fontWeight: 500 }}>{data.p2Time}</span>
             </div>
 
@@ -72,8 +76,8 @@ const CustomTooltip = ({ active, payload, p1Name, p2Name, allSeasons }: any) => 
                 textAlign: 'center',
                 padding: '8px',
                 borderRadius: '8px',
-                background: diff < 0 ? 'rgba(0, 174, 239, 0.1)' : diff > 0 ? 'rgba(249, 115, 22, 0.1)' : 'rgba(100, 116, 139, 0.1)',
-                color: diff < 0 ? '#00AEEF' : diff > 0 ? '#F97316' : '#64748B',
+                background: diff < 0 ? `rgba(${p1Color === '#00AEEF' ? '0, 174, 239' : '249, 115, 22'}, 0.1)` : diff > 0 ? `rgba(${p2Color === '#F97316' ? '249, 115, 22' : '0, 174, 239'}, 0.1)` : 'rgba(100, 116, 139, 0.1)',
+                color: diff < 0 ? p1Color : diff > 0 ? p2Color : '#64748B',
                 fontSize: '13px',
                 fontWeight: 600
             }}>
@@ -319,6 +323,9 @@ export default function RaceComparison() {
     const [displayP1Name, setDisplayP1Name] = useState<string | null>(null);
     const [displayP2Name, setDisplayP2Name] = useState<string | null>(null);
 
+    // Track whether participants were swapped
+    const [isSwapped, setIsSwapped] = useState(false);
+
     // Compute all seasons for color mapping
     const allSeasons = useMemo(() => {
         return [...new Set(chartData.map(d => d.season))].sort();
@@ -330,6 +337,7 @@ export default function RaceComparison() {
                 setChartData([]);
                 setDisplayP1Name(null);
                 setDisplayP2Name(null);
+                setIsSwapped(false);
                 return;
             }
 
@@ -343,6 +351,7 @@ export default function RaceComparison() {
                 let commonRaces = compareRaces(hist1, hist2, category);
                 let finalP1Name = p1Name;
                 let finalP2Name = p2Name;
+                let swapped = false;
 
                 // Determine if we should swap runners so the faster one (more wins) has positive y-axis
                 if (commonRaces.length > 0) {
@@ -362,11 +371,13 @@ export default function RaceComparison() {
                         // Swap names as well
                         finalP1Name = p2Name;
                         finalP2Name = p1Name;
+                        swapped = true;
                     }
                 }
 
                 setDisplayP1Name(finalP1Name);
                 setDisplayP2Name(finalP2Name);
+                setIsSwapped(swapped);
                 setChartData(commonRaces);
             } catch (error) {
                 console.error("Error comparing:", error);
@@ -710,7 +721,7 @@ export default function RaceComparison() {
                                     )}
 
                                     <Tooltip
-                                        content={<CustomTooltip p1Name={displayP1Name || p1Name} p2Name={displayP2Name || p2Name} allSeasons={allSeasons} />}
+                                        content={<CustomTooltip p1Name={displayP1Name || p1Name!} p2Name={displayP2Name || p2Name!} originalP1Name={p1Name} originalP2Name={p2Name} allSeasons={allSeasons} />}
                                         cursor={{ stroke: '#94A3B8', strokeDasharray: '4 4' }}
                                     />
 
@@ -728,7 +739,7 @@ export default function RaceComparison() {
                                             <Line
                                                 type="monotone"
                                                 dataKey="pace1"
-                                                stroke="#00AEEF"
+                                                stroke={isSwapped ? "#F97316" : "#00AEEF"}
                                                 strokeWidth={3}
                                                 dot={createCustomDot(allSeasons)}
                                                 activeDot={createCustomActiveDot(allSeasons)}
@@ -736,7 +747,7 @@ export default function RaceComparison() {
                                             <Line
                                                 type="monotone"
                                                 dataKey="pace2"
-                                                stroke="#F97316"
+                                                stroke={isSwapped ? "#00AEEF" : "#F97316"}
                                                 strokeWidth={3}
                                                 dot={createCustomDot(allSeasons)}
                                                 activeDot={createCustomActiveDot(allSeasons)}

@@ -262,12 +262,52 @@ Comprehensive translation of user-facing text to Latvian for native audience.
 - [src/components/RaceComparison.tsx:682](src/components/RaceComparison.tsx#L682) - Y-axis label
 - [src/components/RaceComparison.tsx:762](src/components/RaceComparison.tsx#L762) - Footer attribution
 
+## 12. Color Consistency Bug Fix (January 17, 2026)
+Fixed tooltip and line chart colors to remain consistent with search input colors when participants are swapped.
+
+### Problem
+When participants were flipped to show the faster runner with positive y-axis values, the colors in the tooltip and individual line chart didn't update to match the original search input colors:
+- First input (1. dalībnieks) should always be blue (#00AEEF)
+- Second input (2. dalībnieks) should always be orange (#F97316)
+
+However, after swapping, the tooltip and line colors were hardcoded and didn't reflect which participant came from which input.
+
+### Solution
+**Tooltip Colors** ([src/components/RaceComparison.tsx:41-88](src/components/RaceComparison.tsx#L41-L88)):
+- Added `originalP1Name` and `originalP2Name` props to CustomTooltip
+- Dynamically determine colors based on which original person each display name corresponds to
+- Updated background colors to use dynamic color logic
+
+**Individual Plot Line Colors** ([src/components/RaceComparison.tsx:322-327](src/components/RaceComparison.tsx#L322-L327)):
+- Added `isSwapped` state to track whether participants were swapped
+- Updated swap logic to set `isSwapped = true` when participants are flipped
+- Made line colors conditional ([src/components/RaceComparison.tsx:731-739](src/components/RaceComparison.tsx#L731-L739)):
+  - When not swapped: `pace1` blue, `pace2` orange
+  - When swapped: `pace1` orange, `pace2` blue
+
+### Impact
+Colors now consistently represent which search input each participant came from, regardless of whether they were swapped for chart display purposes. A participant selected in the blue input will always appear in blue across tooltips and line charts.
+
+### Test Coverage
+**New Test File**: [src/components/RaceComparison.test.tsx](src/components/RaceComparison.test.tsx) - 14 comprehensive tests:
+- Participant swapping logic (2 tests)
+- Tooltip color mapping (4 tests)
+- Individual plot mode line colors (2 tests)
+- Full integration tests (3 tests)
+- Edge cases (3 tests)
+
+**Test Results**: All 120 tests passing (14 new + 106 existing)
+
+### Files Modified
+- [src/components/RaceComparison.tsx](src/components/RaceComparison.tsx) - Updated CustomTooltip, added isSwapped state, made line colors dynamic
+- [src/components/RaceComparison.test.tsx](src/components/RaceComparison.test.tsx) - New comprehensive test suite
+
 ## Current Status
 - **Extraction**: ✅ Complete & Tested (both Tautas and Sporta)
 - **Scraping**: ✅ Complete for all available history (1,876 Sporta + 4,461 Tautas)
 - **Database**: ✅ Deployed & Populated with 6,161 unique participants and 16,245 races
 - **API**: ✅ Running locally (`wrangler dev --remote`) on port 8787, connected to live database
 - **Frontend**: ✅ Complete with polished design, running on port 5173 (`npm run dev`)
-- **Testing**: ✅ 49/49 tests passing (27 original + 22 Sporta integration tests)
+- **Testing**: ✅ 120/120 tests passing (14 color consistency + 106 existing tests)
 - **Data Quality**: ✅ Zero duplicates, proper Latvian character usage, both distances integrated
 - **Design**: ✅ Production-ready with glass morphism, dual plot modes, and social media integration
