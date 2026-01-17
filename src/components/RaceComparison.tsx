@@ -329,12 +329,25 @@ export default function RaceComparison() {
                         href="https://noskrienziemu.lv"
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ display: 'block', cursor: 'pointer' }}
+                        style={{
+                            display: 'block',
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s ease, opacity 0.2s ease',
+                            borderRadius: '8px'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                            e.currentTarget.style.opacity = '0.8';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.opacity = '1';
+                        }}
                     >
                         <img
                             src="/LOGO-NZ-PNG.png"
                             alt="Noskrien Ziemu"
-                            style={{ height: '40px', width: 'auto', maxWidth: '180px', objectFit: 'contain' }}
+                            style={{ height: '40px', width: 'auto', maxWidth: '180px', objectFit: 'contain', display: 'block' }}
                         />
                     </a>
                 </div>
