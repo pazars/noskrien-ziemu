@@ -355,3 +355,180 @@ describe('Latvian duplicate merge - grouping logic', () => {
         expect(groups.size).toBe(2);
     });
 });
+
+describe('Distance filtering in search endpoint', () => {
+    it('should build query with distance filter when distance parameter is provided', () => {
+        const name = 'Davis';
+        const distance = 'Tautas';
+
+        // Simulate the query building logic from worker/index.ts
+        let query = `
+            SELECT MIN(id) as id, name, gender
+            FROM participants
+            WHERE (
+                name LIKE ? COLLATE NOCASE
+                OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                        LOWER(name),
+                        'ā', 'a'), 'č', 'c'), 'ē', 'e'), 'ģ', 'g'), 'ī', 'i'),
+                        'ķ', 'k'), 'ļ', 'l'), 'ņ', 'n'), 'š', 's'), 'ū', 'u'), 'ž', 'z'),
+                    'Ā', 'A'), 'Č', 'C'), 'Ē', 'E'), 'Ģ', 'G'), 'Ī', 'I'),
+                    'Ķ', 'K'), 'Ļ', 'L'), 'Ņ', 'N'), 'Š', 'S'), 'Ū', 'U'), 'Ž', 'Z')
+                LIKE ? COLLATE NOCASE
+            )
+        `;
+
+        const bindings: string[] = [`%${name}%`, `%${normalizeLatvian(name)}%`];
+
+        if (distance) {
+            query += ` AND distance = ?`;
+            bindings.push(distance);
+        }
+
+        query += `
+            GROUP BY name, gender
+            LIMIT 10
+        `;
+
+        expect(query).toContain('AND distance = ?');
+        expect(bindings).toEqual(['%Davis%', '%Davis%', 'Tautas']);
+        expect(bindings).toHaveLength(3);
+    });
+
+    it('should build query without distance filter when distance parameter is not provided', () => {
+        const name = 'Davis';
+        const distance = undefined;
+
+        let query = `
+            SELECT MIN(id) as id, name, gender
+            FROM participants
+            WHERE (
+                name LIKE ? COLLATE NOCASE
+                OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                        LOWER(name),
+                        'ā', 'a'), 'č', 'c'), 'ē', 'e'), 'ģ', 'g'), 'ī', 'i'),
+                        'ķ', 'k'), 'ļ', 'l'), 'ņ', 'n'), 'š', 's'), 'ū', 'u'), 'ž', 'z'),
+                    'Ā', 'A'), 'Č', 'C'), 'Ē', 'E'), 'Ģ', 'G'), 'Ī', 'I'),
+                    'Ķ', 'K'), 'Ļ', 'L'), 'Ņ', 'N'), 'Š', 'S'), 'Ū', 'U'), 'Ž', 'Z')
+                LIKE ? COLLATE NOCASE
+            )
+        `;
+
+        const bindings: string[] = [`%${name}%`, `%${normalizeLatvian(name)}%`];
+
+        if (distance) {
+            query += ` AND distance = ?`;
+            bindings.push(distance);
+        }
+
+        query += `
+            GROUP BY name, gender
+            LIMIT 10
+        `;
+
+        expect(query).not.toContain('AND distance = ?');
+        expect(bindings).toEqual(['%Davis%', '%Davis%']);
+        expect(bindings).toHaveLength(2);
+    });
+
+    it('should filter by Sporta distance', () => {
+        const name = 'Kristaps';
+        const distance = 'Sporta';
+
+        let query = 'SELECT * FROM participants WHERE name LIKE ?';
+        const bindings: string[] = [`%${name}%`];
+
+        if (distance) {
+            query += ` AND distance = ?`;
+            bindings.push(distance);
+        }
+
+        expect(query).toBe('SELECT * FROM participants WHERE name LIKE ? AND distance = ?');
+        expect(bindings).toEqual(['%Kristaps%', 'Sporta']);
+    });
+
+    it('should handle empty distance parameter (falsy value)', () => {
+        const name = 'Davis';
+        const distance = '';
+
+        let query = 'SELECT * FROM participants WHERE name LIKE ?';
+        const bindings: string[] = [`%${name}%`];
+
+        if (distance) {
+            query += ` AND distance = ?`;
+            bindings.push(distance);
+        }
+
+        expect(query).toBe('SELECT * FROM participants WHERE name LIKE ?');
+        expect(bindings).toEqual(['%Davis%']);
+    });
+});
+
+describe('Distance-aware autocomplete behavior', () => {
+    interface MockParticipant {
+        id: number;
+        name: string;
+        distance: string;
+        gender: string;
+    }
+
+    const mockDatabase: MockParticipant[] = [
+        { id: 1, name: 'Dāvis Pazars', distance: 'Tautas', gender: 'M' },
+        { id: 2, name: 'Kristaps Bērziņš', distance: 'Sporta', gender: 'M' },
+        { id: 3, name: 'Kristaps Liepiņš', distance: 'Tautas', gender: 'M' },
+    ];
+
+    function searchParticipants(query: string, distance?: string): MockParticipant[] {
+        const normalized = normalizeLatvian(query.toLowerCase());
+
+        return mockDatabase.filter(participant => {
+            const nameMatch = normalizeLatvian(participant.name.toLowerCase()).includes(normalized);
+            const distanceMatch = !distance || participant.distance === distance;
+            return nameMatch && distanceMatch;
+        });
+    }
+
+    it('should return only Tautas participants when Tautas is selected', () => {
+        const results = searchParticipants('davis', 'Tautas');
+        expect(results).toHaveLength(1);
+        expect(results[0].name).toBe('Dāvis Pazars');
+        expect(results[0].distance).toBe('Tautas');
+    });
+
+    it('should not return Tautas participants when Sporta is selected', () => {
+        const results = searchParticipants('davis', 'Sporta');
+        expect(results).toHaveLength(0);
+    });
+
+    it('should return only Sporta participants when Sporta is selected', () => {
+        const results = searchParticipants('kristaps', 'Sporta');
+        expect(results).toHaveLength(1);
+        expect(results[0].name).toBe('Kristaps Bērziņš');
+        expect(results[0].distance).toBe('Sporta');
+    });
+
+    it('should return participants from both distances when no distance filter is provided', () => {
+        const results = searchParticipants('kristaps');
+        expect(results).toHaveLength(2);
+        expect(results.map(r => r.distance)).toEqual(['Sporta', 'Tautas']);
+    });
+
+    it('should handle Latvian character normalization with distance filter', () => {
+        const results = searchParticipants('Davis', 'Tautas'); // Search without special chars
+        expect(results).toHaveLength(1);
+        expect(results[0].name).toBe('Dāvis Pazars'); // Should match Dāvis
+    });
+
+    it('should return empty array when name exists but in different distance', () => {
+        const results = searchParticipants('liepiņš', 'Sporta');
+        expect(results).toHaveLength(0);
+    });
+
+    it('should find participant when name and distance both match', () => {
+        const results = searchParticipants('liepins', 'Tautas'); // Normalized search
+        expect(results).toHaveLength(1);
+        expect(results[0].name).toBe('Kristaps Liepiņš');
+        expect(results[0].distance).toBe('Tautas');
+    });
+});

@@ -458,6 +458,7 @@ export default function RaceComparison() {
                             onSelect={setP1Name}
                             selectedName={p1Name}
                             accentColor="#00AEEF"
+                            distance={category}
                         />
                     </div>
 
@@ -485,6 +486,7 @@ export default function RaceComparison() {
                             onSelect={setP2Name}
                             selectedName={p2Name}
                             accentColor="#F97316"
+                            distance={category}
                         />
                     </div>
                 </div>

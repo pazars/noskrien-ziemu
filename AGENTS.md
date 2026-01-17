@@ -124,6 +124,104 @@ Notable duplicate resolutions:
 - **Rihards Sinicins** → **Rihards Siņicins** (Sporta, 3 seasons)
 - **Ilze Kronberga** / **ILZE KRONBERGA** → **Ilze Kronberga** (Tautas, natural casing)
 
+## 9. Design Polish & Social Media (January 17, 2026)
+Comprehensive design improvements for production launch, focusing on visual polish and social sharing.
+
+### Visual Enhancements
+- **Glass Morphism**: Chart container now uses semi-transparent background (`rgba(255, 255, 255, 0.6)`) with `backdrop-filter: blur(8px)` for smooth blending with dot grid background
+- **Rounded Corners**: Increased border-radius to 24px for softer appearance
+- **Subtle Shadows**: Reduced shadow intensity (`0 1px 3px rgba(0, 0, 0, 0.03)`) for cleaner look
+- **Border Refinement**: Semi-transparent border (`rgba(226, 232, 240, 0.5)`) maintains definition without harshness
+
+### Plot Mode Toggle
+- **Dual Visualization Modes**:
+  - **Difference Mode**: Single gradient line showing pace difference (positive = p2 faster, negative = p1 faster)
+  - **Individual Mode**: Two separate lines showing actual pace for each runner
+- **Toggle Component**: Matches existing CategoryToggle design pattern with animated slider
+- **Conditional Rendering**:
+  - Y-axis formatting adapts to mode (±mm:ss for difference, mm:ss for individual)
+  - Zero reference line only shown in difference mode
+  - Y-axis label changes: "Pace Diff /km" vs "Pace /km"
+- **Smart Placement**: Right-aligned above chart container to maintain symmetry without interfering with plot area
+
+### Social Media Integration
+- **Open Graph Image**: Generated 1200×630px PNG with dot grid background, centered NZ logo, and Latvian text "REZULTĀTU SALĪDZINĀJUMS"
+- **Generation Script**: `scripts/generate-og-image-simple.js` using Sharp library for programmatic image creation
+- **Meta Tags**: Comprehensive Open Graph and Twitter Card tags in `index.html`
+- **Favicon**: Snowflake emoji ❄️ via SVG data URI
+
+### Metadata & SEO
+- **Language**: HTML lang attribute set to "lv" (Latvian)
+- **Title**: "Rezultātu Salīdzinājums | Noskrien Ziemu"
+- **Description**: Latvian description for search engines and social previews
+- **PWA Tags**: Theme color (#00AEEF), apple-mobile-web-app settings
+- **Performance**: X-UA-Compatible for IE edge mode
+
+### Attribution
+- **Footer**: Subtle "Made by Dāvis Pazars" with Twitter link
+- **Styling**: Muted colors (#94A3B8) with hover effect to brand blue
+- **Position**: Fixed at bottom with flexShrink: 0
+
+### Files Modified
+- `src/components/RaceComparison.tsx` - Added PlotModeToggle component, glass morphism styling, conditional chart rendering
+- `index.html` - Added comprehensive meta tags, favicon, social media tags
+- `scripts/generate-og-image-simple.js` - Created OG image generator
+- `package.json` - Added `generate:og` npm script
+
+### Technical Implementation
+- **State Management**: `plotMode` state with 'difference' | 'individual' type
+- **Conditional Y-axis**: Domain and tick formatter adjust based on mode
+- **ES Modules**: Script uses ES module syntax (import/export) compatible with package.json type: "module"
+- **Sharp Library**: Leverages existing Sharp dependency for image generation
+
+## 10. Distance-Aware Autocomplete (January 17, 2026)
+Fixed autocomplete suggestions to only show participants who have raced in the selected distance category.
+
+### Problem
+- Participants who only raced in one distance (e.g., Tautas) were appearing as suggestions when the other distance (Sporta) was selected
+- This created user confusion, especially for Latvian users expecting accurate filtering
+
+### Solution
+**ParticipantSelector Component** ([src/components/ParticipantSelector.tsx](src/components/ParticipantSelector.tsx)):
+- Added `distance` prop to component interface
+- Modified API fetch to include distance parameter in query string
+- Added `distance` to useEffect dependency array to refetch when category changes
+- Enhanced empty state with Latvian messaging:
+  - "Dalībnieks nav atrasts" (Participant not found)
+  - "Varbūt viņš/-a skrēja Sporta/Tautas distancē?" (Maybe he/she ran the Sporta/Tautas distance?)
+
+**API Endpoint** ([worker/index.ts](worker/index.ts)):
+- Modified `/api/results` endpoint to accept optional `distance` query parameter
+- Added SQL WHERE clause filtering: `AND distance = ?` when distance is provided
+- Updated bindings array to include distance parameter conditionally
+
+**RaceComparison Component** ([src/components/RaceComparison.tsx](src/components/RaceComparison.tsx)):
+- Passed `category` state as `distance` prop to both ParticipantSelector instances
+- Ensures autocomplete is synchronized with selected distance toggle
+
+### Impact
+- Users now only see participants who have actually raced in the selected distance
+- Helpful Latvian suggestion guides users to check the other distance when no match is found
+- Eliminates confusion from irrelevant autocomplete suggestions
+
+### Test Coverage
+**New Test Files**:
+- [src/components/ParticipantSelector.test.ts](src/components/ParticipantSelector.test.ts) - 18 tests covering:
+  - API query URL construction with/without distance parameter
+  - useEffect dependency array behavior for refetching
+  - Latvian empty state messages for both distances
+  - Real-world filtering scenarios (Dāvis Pazars use case)
+  - Category toggle synchronization
+
+**Updated Test Files**:
+- [worker/index.test.ts](worker/index.test.ts) - Added 17 tests for:
+  - Distance filtering in SQL query construction
+  - Conditional binding array with distance parameter
+  - Mock database filtering by distance
+  - Latvian character normalization with distance filter
+
+**Test Results**: All 106 tests passing (18 new ParticipantSelector tests + 17 new worker tests + 71 existing tests)
+
 ## Current Status
 - **Extraction**: ✅ Complete & Tested (both Tautas and Sporta)
 - **Scraping**: ✅ Complete for all available history (1,876 Sporta + 4,461 Tautas)
@@ -132,3 +230,4 @@ Notable duplicate resolutions:
 - **Frontend**: ✅ Complete with polished design, running on port 5173 (`npm run dev`)
 - **Testing**: ✅ 49/49 tests passing (27 original + 22 Sporta integration tests)
 - **Data Quality**: ✅ Zero duplicates, proper Latvian character usage, both distances integrated
+- **Design**: ✅ Production-ready with glass morphism, dual plot modes, and social media integration

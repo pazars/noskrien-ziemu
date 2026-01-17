@@ -6,6 +6,7 @@ interface ComponentProps {
     onSelect: (name: string | null) => void;
     selectedName: string | null;
     accentColor?: string;
+    distance?: string;
 }
 
 interface SearchResult {
@@ -14,7 +15,7 @@ interface SearchResult {
     gender: string;
 }
 
-export default function ParticipantSelector({ label, onSelect, selectedName, accentColor = '#00AEEF' }: ComponentProps) {
+export default function ParticipantSelector({ label, onSelect, selectedName, accentColor = '#00AEEF', distance }: ComponentProps) {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isOpen, setIsOpen] = useState(false);
@@ -33,7 +34,12 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
         const fetchParticipants = async () => {
             setLoading(true);
             try {
-                const response = await fetch(`http://localhost:8787/api/results?name=${encodeURIComponent(query)}`);
+                const url = new URL('http://localhost:8787/api/results');
+                url.searchParams.set('name', query);
+                if (distance) {
+                    url.searchParams.set('distance', distance);
+                }
+                const response = await fetch(url.toString());
                 const data = await response.json();
                 if (Array.isArray(data)) {
                     setResults(data);
@@ -50,7 +56,7 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
 
         const timeoutId = setTimeout(fetchParticipants, 300);
         return () => clearTimeout(timeoutId);
-    }, [query]);
+    }, [query, distance]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -317,7 +323,7 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
                 {/* Empty state */}
                 {isOpen && query.length >= 2 && results.length === 0 && !loading && !selectedName && (
                     <div
-                        className="absolute z-50 w-full mt-2 py-6 rounded-xl text-center animate-fade-in-up"
+                        className="absolute z-50 w-full mt-2 py-6 px-4 rounded-xl text-center animate-fade-in-up"
                         style={{
                             animationDuration: '0.2s',
                             background: 'white',
@@ -325,7 +331,14 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
                             boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
                         }}
                     >
-                        <p style={{ color: '#94A3B8', fontSize: '14px' }}>No participants found</p>
+                        <p style={{ color: '#94A3B8', fontSize: '14px', marginBottom: '4px' }}>
+                            Dalībnieks nav atrasts
+                        </p>
+                        {distance && (
+                            <p style={{ color: '#94A3B8', fontSize: '12px' }}>
+                                Varbūt viņš/-a skrēja {distance === 'Tautas' ? 'Sporta' : 'Tautas'} distancē?
+                            </p>
+                        )}
                     </div>
                 )}
             </div>

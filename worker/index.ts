@@ -39,6 +39,7 @@ export default {
         if (url.pathname === "/api/results") {
             // Query parameters
             const name = url.searchParams.get("name");
+            const distance = url.searchParams.get("distance");
 
             if (!name || name.length < 2) {
                 return Response.json([], { headers });
@@ -49,7 +50,9 @@ export default {
             // We select one ID just to have a key, but frontend should rely on name
             // Search both original and normalized (Latvian-insensitive) versions
             const normalizedQuery = normalizeLatvian(name);
-            const query = `
+
+            // Build query with optional distance filter
+            let query = `
                 SELECT MIN(id) as id, name, gender
                 FROM participants
                 WHERE (
@@ -63,13 +66,23 @@ export default {
                         'Ķ', 'K'), 'Ļ', 'L'), 'Ņ', 'N'), 'Š', 'S'), 'Ū', 'U'), 'Ž', 'Z')
                     LIKE ? COLLATE NOCASE
                 )
+            `;
+
+            const bindings: string[] = [`%${name}%`, `%${normalizedQuery}%`];
+
+            if (distance) {
+                query += ` AND distance = ?`;
+                bindings.push(distance);
+            }
+
+            query += `
                 GROUP BY name, gender
                 LIMIT 10
             `;
 
             try {
                 const { results } = await env.DB.prepare(query)
-                    .bind(`%${name}%`, `%${normalizedQuery}%`)
+                    .bind(...bindings)
                     .all();
                 return Response.json(results, { headers });
             } catch (e) {
