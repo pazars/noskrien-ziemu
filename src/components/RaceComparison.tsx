@@ -370,8 +370,8 @@ export default function RaceComparison() {
             setLoading(true);
             try {
                 const [hist1, hist2] = await Promise.all([
-                    fetch(`http://localhost:8787/api/history?name=${encodeURIComponent(p1Name)}`).then(res => res.json()) as Promise<HistoryResponse>,
-                    fetch(`http://localhost:8787/api/history?name=${encodeURIComponent(p2Name)}`).then(res => res.json()) as Promise<HistoryResponse>
+                    fetch(`/api/history?name=${encodeURIComponent(p1Name)}`).then(res => res.json()) as Promise<HistoryResponse>,
+                    fetch(`/api/history?name=${encodeURIComponent(p2Name)}`).then(res => res.json()) as Promise<HistoryResponse>
                 ]);
 
                 let commonRaces = compareRaces(hist1, hist2, category);

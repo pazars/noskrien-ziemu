@@ -34,7 +34,7 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
         const fetchParticipants = async () => {
             setLoading(true);
             try {
-                const url = new URL('http://localhost:8787/api/results');
+                const url = new URL('/api/results', window.location.origin);
                 url.searchParams.set('name', query);
                 if (distance) {
                     url.searchParams.set('distance', distance);
