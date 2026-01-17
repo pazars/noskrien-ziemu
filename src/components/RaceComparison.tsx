@@ -171,6 +171,51 @@ const CategoryToggle = ({ value, onChange }: { value: string; onChange: (v: stri
     );
 };
 
+// Plot Mode Toggle Component
+const PlotModeToggle = ({ value, onChange }: { value: 'difference' | 'individual'; onChange: (v: 'difference' | 'individual') => void }) => {
+    const diffRef = useRef<HTMLSpanElement>(null);
+    const indivRef = useRef<HTMLSpanElement>(null);
+    const [sliderStyle, setSliderStyle] = useState({ left: 4, width: 0 });
+
+    useEffect(() => {
+        const activeRef = value === 'difference' ? diffRef : indivRef;
+        if (activeRef.current) {
+            setSliderStyle({
+                left: activeRef.current.offsetLeft,
+                width: activeRef.current.offsetWidth
+            });
+        }
+    }, [value]);
+
+    return (
+        <div className="toggle-container" style={{ fontSize: '13px' }}>
+            <div
+                className="toggle-slider"
+                style={{
+                    left: sliderStyle.left,
+                    width: sliderStyle.width
+                }}
+            />
+            <span
+                ref={diffRef}
+                className={`toggle-option ${value === 'difference' ? 'active' : ''}`}
+                onClick={() => onChange('difference')}
+                style={{ padding: '6px 14px' }}
+            >
+                Difference
+            </span>
+            <span
+                ref={indivRef}
+                className={`toggle-option ${value === 'individual' ? 'active' : ''}`}
+                onClick={() => onChange('individual')}
+                style={{ padding: '6px 14px' }}
+            >
+                Individual
+            </span>
+        </div>
+    );
+};
+
 // Stats Summary Component
 const StatsSummary = ({ p1Name, p2Name, chartData }: { p1Name: string; p2Name: string; chartData: any[] }) => {
     const stats = useMemo(() => {
@@ -268,6 +313,7 @@ export default function RaceComparison() {
     const [category, setCategory] = useState<string>('Tautas');
     const [chartData, setChartData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [plotMode, setPlotMode] = useState<'difference' | 'individual'>('difference');
 
     // Display names that may be swapped to show faster runner first
     const [displayP1Name, setDisplayP1Name] = useState<string | null>(null);
@@ -339,7 +385,7 @@ export default function RaceComparison() {
             width: '100%',
             maxWidth: '100vw',
             overflow: 'hidden',
-            padding: '16px 24px',
+            padding: '16px 24px 8px',
             display: 'flex',
             flexDirection: 'column',
             boxSizing: 'border-box'
@@ -537,15 +583,26 @@ export default function RaceComparison() {
                     {/* Stats Summary */}
                     <StatsSummary p1Name={displayP1Name || p1Name!} p2Name={displayP2Name || p2Name!} chartData={chartData} />
 
+                    {/* Plot Mode Toggle - above chart container */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        paddingRight: '8px',
+                        marginBottom: '8px'
+                    }}>
+                        <PlotModeToggle value={plotMode} onChange={setPlotMode} />
+                    </div>
+
                     {/* Chart Container */}
                     <div style={{
                         flex: 1,
                         width: '100%',
-                        background: 'white',
-                        borderRadius: '16px',
+                        background: 'rgba(255, 255, 255, 0.6)',
+                        backdropFilter: 'blur(8px)',
+                        borderRadius: '24px',
                         padding: '8px 12px 12px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
-                        border: '1px solid #E2E8F0',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+                        border: '1px solid rgba(226, 232, 240, 0.5)',
                         minHeight: 0,
                         display: 'flex',
                         flexDirection: 'column'
@@ -578,13 +635,14 @@ export default function RaceComparison() {
                                         vertical={false}
                                     />
 
-                                    {/* Zero reference line */}
-                                    <ReferenceLine
-                                        y={0}
-                                        stroke="#94A3B8"
-                                        strokeWidth={1}
-                                        strokeDasharray="4 4"
-                                    />
+                                    {plotMode === 'difference' && (
+                                        <ReferenceLine
+                                            y={0}
+                                            stroke="#94A3B8"
+                                            strokeWidth={1}
+                                            strokeDasharray="4 4"
+                                        />
+                                    )}
 
                                     <XAxis
                                         dataKey="race"
@@ -598,54 +656,124 @@ export default function RaceComparison() {
                                         interval={0}
                                     />
 
-                                    <YAxis
-                                        stroke="#CBD5E1"
-                                        tick={{ fill: '#64748B', fontSize: 11 }}
-                                        tickLine={{ stroke: '#CBD5E1' }}
-                                        axisLine={{ stroke: '#CBD5E1' }}
-                                        domain={[
-                                            (dataMin: number) => Math.min(0, Math.floor(dataMin / 10) * 10),
-                                            (dataMax: number) => Math.max(0, Math.ceil(dataMax / 10) * 10)
-                                        ]}
-                                        tickFormatter={(val) => {
-                                            const absVal = Math.abs(Math.round(val));
-                                            const sign = val > 0 ? '+' : val < 0 ? '-' : '';
-                                            const mins = Math.floor(absVal / 60);
-                                            const secs = absVal % 60;
-                                            if (mins > 0) {
-                                                return `${sign}${mins}:${secs.toString().padStart(2, '0')}`;
-                                            }
-                                            return `${sign}${secs}`;
-                                        }}
-                                        label={{
-                                            value: 'Pace Diff /km',
-                                            angle: -90,
-                                            position: 'center',
-                                            fill: '#64748B',
-                                            fontSize: 12,
-                                            dx: -20
-                                        }}
-                                    />
+                                    {plotMode === 'difference' ? (
+                                        <YAxis
+                                            stroke="#CBD5E1"
+                                            tick={{ fill: '#64748B', fontSize: 11 }}
+                                            tickLine={{ stroke: '#CBD5E1' }}
+                                            axisLine={{ stroke: '#CBD5E1' }}
+                                            domain={[
+                                                (dataMin: number) => Math.min(0, Math.floor(dataMin / 10) * 10),
+                                                (dataMax: number) => Math.max(0, Math.ceil(dataMax / 10) * 10)
+                                            ]}
+                                            tickFormatter={(val) => {
+                                                const absVal = Math.abs(Math.round(val));
+                                                const sign = val > 0 ? '+' : val < 0 ? '-' : '';
+                                                const mins = Math.floor(absVal / 60);
+                                                const secs = absVal % 60;
+                                                if (mins > 0) {
+                                                    return `${sign}${mins}:${secs.toString().padStart(2, '0')}`;
+                                                }
+                                                return `${sign}${secs}`;
+                                            }}
+                                            label={{
+                                                value: 'Pace Diff /km',
+                                                angle: -90,
+                                                position: 'center',
+                                                fill: '#64748B',
+                                                fontSize: 12,
+                                                dx: -20
+                                            }}
+                                        />
+                                    ) : (
+                                        <YAxis
+                                            stroke="#CBD5E1"
+                                            tick={{ fill: '#64748B', fontSize: 11 }}
+                                            tickLine={{ stroke: '#CBD5E1' }}
+                                            axisLine={{ stroke: '#CBD5E1' }}
+                                            tickFormatter={(val) => {
+                                                const mins = Math.floor(val / 60);
+                                                const secs = val % 60;
+                                                return `${mins}:${secs.toString().padStart(2, '0')}`;
+                                            }}
+                                            label={{
+                                                value: 'Pace /km',
+                                                angle: -90,
+                                                position: 'center',
+                                                fill: '#64748B',
+                                                fontSize: 12,
+                                                dx: -20
+                                            }}
+                                        />
+                                    )}
 
                                     <Tooltip
                                         content={<CustomTooltip p1Name={displayP1Name || p1Name} p2Name={displayP2Name || p2Name} allSeasons={allSeasons} />}
                                         cursor={{ stroke: '#94A3B8', strokeDasharray: '4 4' }}
                                     />
 
-                                    <Line
-                                        type="monotone"
-                                        dataKey="diff"
-                                        stroke="url(#lineGradient)"
-                                        strokeWidth={3}
-                                        dot={createCustomDot(allSeasons)}
-                                        activeDot={createCustomActiveDot(allSeasons)}
-                                    />
+                                    {plotMode === 'difference' ? (
+                                        <Line
+                                            type="monotone"
+                                            dataKey="diff"
+                                            stroke="url(#lineGradient)"
+                                            strokeWidth={3}
+                                            dot={createCustomDot(allSeasons)}
+                                            activeDot={createCustomActiveDot(allSeasons)}
+                                        />
+                                    ) : (
+                                        <>
+                                            <Line
+                                                type="monotone"
+                                                dataKey="pace1"
+                                                stroke="#00AEEF"
+                                                strokeWidth={3}
+                                                dot={createCustomDot(allSeasons)}
+                                                activeDot={createCustomActiveDot(allSeasons)}
+                                            />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="pace2"
+                                                stroke="#F97316"
+                                                strokeWidth={3}
+                                                dot={createCustomDot(allSeasons)}
+                                                activeDot={createCustomActiveDot(allSeasons)}
+                                            />
+                                        </>
+                                    )}
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* Footer */}
+            <footer style={{
+                flexShrink: 0,
+                textAlign: 'center',
+                padding: '8px 0',
+                fontSize: '11px',
+                color: '#94A3B8',
+                fontWeight: 400
+            }}>
+                Made by{' '}
+                <a
+                    href="https://twitter.com/davispazars"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                        color: '#64748B',
+                        textDecoration: 'none',
+                        fontWeight: 500,
+                        transition: 'color 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#00AEEF'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#64748B'}
+                >
+                    Dāvis Pazars
+                </a>
+            </footer>
         </div>
     );
 }
