@@ -31,11 +31,10 @@ const getSeasonColor = (season: string, allSeasons: string[] = []) => {
 
 
 const formatPaceDiff = (diff: number) => {
-    const sign = diff > 0 ? '+' : diff < 0 ? '-' : '';
     const absDiff = Math.abs(Math.round(diff));
     const mins = Math.floor(absDiff / 60);
     const secs = absDiff % 60;
-    return `${sign}${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
 // Custom tooltip
