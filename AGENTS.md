@@ -302,6 +302,49 @@ Colors now consistently represent which search input each participant came from,
 - [src/components/RaceComparison.tsx](src/components/RaceComparison.tsx) - Updated CustomTooltip, added isSwapped state, made line colors dynamic
 - [src/components/RaceComparison.test.tsx](src/components/RaceComparison.test.tsx) - New comprehensive test suite
 
+## 13. Chart Y-Axis Improvements (January 17, 2026)
+Enhanced chart readability with optimized Y-axis tick intervals and dynamic scaling.
+
+### Temps Chart (Individual Plot Mode)
+**Minimum Y-Axis**: Set to 3:00 (180 seconds) instead of auto-scaling from 0
+- Rationale: No runner averages faster than 3:00/km, eliminates unnecessary white space
+- Provides more granular view of actual pace variations
+
+**Tick Interval**: Fixed at 30 seconds
+- Display format: 3:00, 3:30, 4:00, 4:30, etc.
+- Provides clear, easy-to-read pace markers
+
+### Starpība Chart (Difference Plot Mode)
+**Adaptive Tick Intervals**: Automatically adjusts based on data range
+- **15-second intervals**: When all pace differences ≤ 2:30 (150s)
+  - Provides fine-grained comparison for closely matched runners
+  - Display format: 0, +15, +30, +45, etc.
+- **30-second intervals**: When any pace difference > 2:30 (150s)
+  - Prevents overcrowding with too many tick marks
+  - Display format: 0, +30, +60, +90, etc.
+
+### Technical Implementation
+**useMemo Optimization** ([src/components/RaceComparison.tsx:335-356](src/components/RaceComparison.tsx#L335-L356)):
+- `differenceTicks`: Computes tick array based on max absolute difference
+- `differenceInterval`: Stores interval (15 or 30) for domain calculation
+- `individualTicks`: Fixed 30s interval starting at 180s
+- All computations memoized to prevent unnecessary recalculations
+
+**Dynamic Domain Calculation** ([src/components/RaceComparison.tsx:704-707](src/components/RaceComparison.tsx#L704-L707)):
+- Domain rounds to match computed interval for consistent appearance
+- Ensures ticks align perfectly with domain boundaries
+
+### Impact
+- **Improved Readability**: Y-axis scales appropriately to data range
+- **Better UX**: Users can quickly read exact pace values at regular intervals
+- **Smart Adaptation**: Chart automatically adjusts granularity based on competitiveness of comparison
+
+### Files Modified
+- [src/components/RaceComparison.tsx:335-346](src/components/RaceComparison.tsx#L335-L346) - Adaptive tick interval logic
+- [src/components/RaceComparison.tsx:348-356](src/components/RaceComparison.tsx#L348-L356) - Individual plot ticks with 180s minimum
+- [src/components/RaceComparison.tsx:704-708](src/components/RaceComparison.tsx#L704-L708) - Starpība Y-axis with dynamic domain/ticks
+- [src/components/RaceComparison.tsx:732-736](src/components/RaceComparison.tsx#L732-L736) - Temps Y-axis with 180s minimum and 30s ticks
+
 ## Current Status
 - **Extraction**: ✅ Complete & Tested (both Tautas and Sporta)
 - **Scraping**: ✅ Complete for all available history (1,876 Sporta + 4,461 Tautas)

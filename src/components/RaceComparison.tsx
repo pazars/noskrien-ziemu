@@ -331,6 +331,32 @@ export default function RaceComparison() {
         return [...new Set(chartData.map(d => d.season))].sort();
     }, [chartData]);
 
+    // Compute Y-axis ticks for difference plot (every 15s or 30s depending on range)
+    const { differenceTicks, differenceInterval } = useMemo(() => {
+        if (chartData.length === 0) return { differenceTicks: undefined, differenceInterval: 15 };
+        const maxAbsDiff = Math.max(...chartData.map(d => Math.abs(d.diff)));
+        const interval = maxAbsDiff > 150 ? 30 : 15; // Use 30s if any diff > 2:30, otherwise 15s
+        const min = Math.min(0, Math.floor(Math.min(...chartData.map(d => d.diff)) / interval) * interval);
+        const max = Math.max(0, Math.ceil(Math.max(...chartData.map(d => d.diff)) / interval) * interval);
+        const ticks = [];
+        for (let i = min; i <= max; i += interval) {
+            ticks.push(i);
+        }
+        return { differenceTicks: ticks, differenceInterval: interval };
+    }, [chartData]);
+
+    // Compute Y-axis ticks for individual plot (every 30 seconds, starting at 180)
+    const individualTicks = useMemo(() => {
+        if (chartData.length === 0) return undefined;
+        const min = 180;
+        const max = Math.ceil(Math.max(...chartData.map(d => Math.max(d.pace1, d.pace2))) / 30) * 30;
+        const ticks = [];
+        for (let i = min; i <= max; i += 30) {
+            ticks.push(i);
+        }
+        return ticks;
+    }, [chartData]);
+
     useEffect(() => {
         const fetchData = async () => {
             if (!p1Name || !p2Name) {
@@ -676,9 +702,10 @@ export default function RaceComparison() {
                                             tickLine={{ stroke: '#CBD5E1' }}
                                             axisLine={{ stroke: '#CBD5E1' }}
                                             domain={[
-                                                (dataMin: number) => Math.min(0, Math.floor(dataMin / 10) * 10),
-                                                (dataMax: number) => Math.max(0, Math.ceil(dataMax / 10) * 10)
+                                                (dataMin: number) => Math.min(0, Math.floor(dataMin / differenceInterval) * differenceInterval),
+                                                (dataMax: number) => Math.max(0, Math.ceil(dataMax / differenceInterval) * differenceInterval)
                                             ]}
+                                            ticks={differenceTicks}
                                             tickFormatter={(val) => {
                                                 const absVal = Math.abs(Math.round(val));
                                                 const sign = val > 0 ? '+' : val < 0 ? '-' : '';
@@ -704,6 +731,11 @@ export default function RaceComparison() {
                                             tick={{ fill: '#64748B', fontSize: 11 }}
                                             tickLine={{ stroke: '#CBD5E1' }}
                                             axisLine={{ stroke: '#CBD5E1' }}
+                                            domain={[
+                                                180, // 3:00 min/km - nobody will average faster than this
+                                                (dataMax: number) => Math.ceil(dataMax / 30) * 30
+                                            ]}
+                                            ticks={individualTicks}
                                             tickFormatter={(val) => {
                                                 const mins = Math.floor(val / 60);
                                                 const secs = val % 60;
