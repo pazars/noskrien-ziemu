@@ -22,6 +22,7 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const inputRef = useRef<HTMLInputElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const highlightedItemRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (!query || query.length < 2) {
@@ -61,6 +62,16 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Scroll highlighted item into view
+    useEffect(() => {
+        if (highlightedItemRef.current) {
+            highlightedItemRef.current.scrollIntoView({
+                block: 'nearest',
+                behavior: 'smooth'
+            });
+        }
+    }, [highlightedIndex]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (!isOpen || results.length === 0) return;
@@ -282,6 +293,7 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
                         {results.map((p, index) => (
                             <div
                                 key={p.id}
+                                ref={highlightedIndex === index ? highlightedItemRef : null}
                                 style={{
                                     padding: '10px 16px',
                                     cursor: 'pointer',
