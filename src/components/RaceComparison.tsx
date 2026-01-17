@@ -269,6 +269,10 @@ export default function RaceComparison() {
     const [chartData, setChartData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
 
+    // Display names that may be swapped to show faster runner first
+    const [displayP1Name, setDisplayP1Name] = useState<string | null>(null);
+    const [displayP2Name, setDisplayP2Name] = useState<string | null>(null);
+
     // Compute all seasons for color mapping
     const allSeasons = useMemo(() => {
         return [...new Set(chartData.map(d => d.season))].sort();
@@ -278,6 +282,8 @@ export default function RaceComparison() {
         const fetchData = async () => {
             if (!p1Name || !p2Name) {
                 setChartData([]);
+                setDisplayP1Name(null);
+                setDisplayP2Name(null);
                 return;
             }
 
@@ -289,13 +295,15 @@ export default function RaceComparison() {
                 ]);
 
                 let commonRaces = compareRaces(hist1, hist2, category);
+                let finalP1Name = p1Name;
+                let finalP2Name = p2Name;
 
                 // Determine if we should swap runners so the faster one (more wins) has positive y-axis
                 if (commonRaces.length > 0) {
                     const p1Wins = commonRaces.filter(r => r.diff < 0).length;
                     const p2Wins = commonRaces.filter(r => r.diff > 0).length;
 
-                    // If p1 has more wins, invert the diff so their wins show as positive
+                    // If p1 has more wins, swap both data and names
                     if (p1Wins > p2Wins) {
                         commonRaces = commonRaces.map(race => ({
                             ...race,
@@ -305,9 +313,14 @@ export default function RaceComparison() {
                             p2Time: race.p1Time,
                             diff: -race.diff
                         }));
+                        // Swap names as well
+                        finalP1Name = p2Name;
+                        finalP2Name = p1Name;
                     }
                 }
 
+                setDisplayP1Name(finalP1Name);
+                setDisplayP2Name(finalP2Name);
                 setChartData(commonRaces);
             } catch (error) {
                 console.error("Error comparing:", error);
@@ -508,7 +521,7 @@ export default function RaceComparison() {
                         No Common Races
                     </h3>
                     <p style={{ color: '#64748B', maxWidth: '400px' }}>
-                        {p1Name} and {p2Name} haven't competed in the same {category} class events.
+                        {displayP1Name || p1Name} and {displayP2Name || p2Name} haven't competed in the same {category} class events.
                     </p>
                 </div>
             )}
@@ -522,7 +535,7 @@ export default function RaceComparison() {
                     minHeight: 0
                 }}>
                     {/* Stats Summary */}
-                    <StatsSummary p1Name={p1Name!} p2Name={p2Name!} chartData={chartData} />
+                    <StatsSummary p1Name={displayP1Name || p1Name!} p2Name={displayP2Name || p2Name!} chartData={chartData} />
 
                     {/* Chart Container */}
                     <div style={{
@@ -615,7 +628,7 @@ export default function RaceComparison() {
                                     />
 
                                     <Tooltip
-                                        content={<CustomTooltip p1Name={p1Name} p2Name={p2Name} allSeasons={allSeasons} />}
+                                        content={<CustomTooltip p1Name={displayP1Name || p1Name} p2Name={displayP2Name || p2Name} allSeasons={allSeasons} />}
                                         cursor={{ stroke: '#94A3B8', strokeDasharray: '4 4' }}
                                     />
 
