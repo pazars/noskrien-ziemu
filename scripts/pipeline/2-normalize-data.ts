@@ -1,0 +1,192 @@
+import fs from 'fs';
+import path from 'path';
+import { normalizeLatvian, countLatvianChars, hasNaturalCasing, deriveSeasonFromDate } from '../../src/utils/latvian.js';
+
+interface Race {
+  Datums: string;
+  Rezultāts: string;
+  km: string;
+  Vieta: string;
+  season?: string;
+}
+
+interface Participant {
+  name: string;
+  link: string;
+  races: Race[];
+  normalized_name?: string;
+}
+
+interface ParticipantRecord {
+  name: string;
+  link: string;
+  races: Race[];
+  season: string;
+  distance: string;
+  gender: string;
+}
+
+/**
+ * Select canonical name from list of variants
+ * Priority: more Latvian chars > natural casing > alphabetical
+ */
+export function selectCanonicalName(names: string[]): string {
+  return names.sort((a, b) => {
+    // 1. More Latvian chars wins
+    const diff = countLatvianChars(b) - countLatvianChars(a);
+    if (diff !== 0) return diff;
+
+    // 2. Natural casing wins over UPPERCASE
+    const aNatural = hasNaturalCasing(a);
+    const bNatural = hasNaturalCasing(b);
+    if (aNatural !== bNatural) return aNatural ? -1 : 1;
+
+    // 3. Alphabetical tie-breaker
+    return a.localeCompare(b);
+  })[0];
+}
+
+/**
+ * Normalize data in-place
+ * - Merge duplicates with different Latvian spellings
+ * - Add normalized_name field
+ * - Add season to races
+ */
+export function normalizeData(dataDir: string): {
+  uniqueParticipants: number;
+  mergedDuplicates: number;
+} {
+  console.log(`\n=== Normalizing data in ${dataDir} ===\n`);
+
+  const registry = new Map<string, ParticipantRecord[]>();
+  let totalParticipants = 0;
+
+  // Step 1: Load all participants
+  if (!fs.existsSync(dataDir)) {
+    throw new Error(`Data directory not found: ${dataDir}`);
+  }
+
+  const seasons = fs.readdirSync(dataDir).filter(f =>
+    fs.statSync(path.join(dataDir, f)).isDirectory()
+  );
+
+  for (const season of seasons) {
+    const seasonPath = path.join(dataDir, season);
+    const distances = fs.readdirSync(seasonPath).filter(f =>
+      fs.statSync(path.join(seasonPath, f)).isDirectory()
+    );
+
+    for (const distance of distances) {
+      const distancePath = path.join(seasonPath, distance);
+      const files = fs.readdirSync(distancePath).filter(f => f.endsWith('.json'));
+
+      for (const file of files) {
+        const filePath = path.join(distancePath, file);
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const participants: Participant[] = JSON.parse(content);
+
+        const gender = file.includes('men') ? 'V' : (file.includes('women') ? 'S' : 'U');
+
+        for (const p of participants) {
+          totalParticipants++;
+
+          const normalized = normalizeLatvian(p.name).toLowerCase();
+          const key = `${normalized}|${distance}|${gender}`;
+
+          if (!registry.has(key)) {
+            registry.set(key, []);
+          }
+
+          registry.get(key)!.push({
+            name: p.name,
+            link: p.link,
+            races: p.races,
+            season,
+            distance,
+            gender
+          });
+        }
+      }
+    }
+  }
+
+  console.log(`Loaded ${totalParticipants} participants across all seasons`);
+
+  // Step 2: Merge duplicates and write back
+  let mergedCount = 0;
+  const processedFiles = new Map<string, Participant[]>();
+
+  for (const [key, group] of registry.entries()) {
+    if (group.length > 1) {
+      const uniqueNames = new Set(group.map(p => p.name));
+      if (uniqueNames.size > 1) {
+        mergedCount += group.length - 1;
+      }
+    }
+
+    // Select canonical name
+    const canonicalName = selectCanonicalName(group.map(p => p.name));
+    const normalized = normalizeLatvian(canonicalName).toLowerCase();
+
+    // Merge all races
+    const allRaces: Race[] = [];
+    for (const participant of group) {
+      for (const race of participant.races) {
+        // Add season to race
+        allRaces.push({
+          ...race,
+          season: deriveSeasonFromDate(race.Datums)
+        });
+      }
+    }
+
+    // Create merged participant (use first occurrence's metadata)
+    const firstOccurrence = group[0];
+    const mergedParticipant: Participant = {
+      name: canonicalName,
+      link: firstOccurrence.link,
+      races: allRaces,
+      normalized_name: normalized
+    };
+
+    // Group by file for writing back
+    for (const participant of group) {
+      const season = participant.season;
+      const distance = participant.distance;
+      const gender = participant.gender;
+      const fileName = gender === 'V' ? 'results_men.json' : 'results_women.json';
+      const filePath = path.join(dataDir, season, distance, fileName);
+
+      if (!processedFiles.has(filePath)) {
+        processedFiles.set(filePath, []);
+      }
+
+      // Only add once per file (avoid duplicates in same file)
+      const existing = processedFiles.get(filePath)!;
+      const alreadyExists = existing.some(p => p.normalized_name === normalized);
+      if (!alreadyExists) {
+        processedFiles.get(filePath)!.push(mergedParticipant);
+      }
+    }
+  }
+
+  // Step 3: Write back to files
+  for (const [filePath, participants] of processedFiles.entries()) {
+    fs.writeFileSync(filePath, JSON.stringify(participants, null, 2));
+  }
+
+  const uniqueCount = registry.size;
+  console.log(`\n✓ Merged ${mergedCount} duplicates`);
+  console.log(`✓ Final count: ${uniqueCount} unique participants\n`);
+
+  return {
+    uniqueParticipants: uniqueCount,
+    mergedDuplicates: mergedCount
+  };
+}
+
+// CLI entry point
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const dataDir = process.argv[2] || path.resolve('data');
+  normalizeData(dataDir);
+}
