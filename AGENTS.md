@@ -402,13 +402,30 @@ ORDER BY date;
 
 This affects visual consistency but is now mitigated by deriving seasons from dates in the comparison logic.
 
+## 15. Cloudflare Pages Migration (January 17, 2026)
+Successfully migrated from a standalone Cloudflare Worker to **Cloudflare Pages with Functions** to resolve "Not Found" deployment issues.
+
+### Architecture Optimization
+- **Unified Project**: Moved API logic from `worker/index.ts` to `functions/api/[[path]].ts`.
+- **Pages Functions**: Cloudflare Pages now serves both the static React assets and the dynamic API from the same project.
+- **Relative API Paths**: Updated `ParticipantSelector.tsx` and `RaceComparison.tsx` to use relative URLs (`/api/...`) instead of hardcoded `localhost:8787` addresses.
+- **SPA Routing**: Added `public/_redirects` to ensure all navigation requests point to `index.html`.
+
+### CLI Deployment Configuration
+- **wrangler.toml**: Updated to include `pages_build_output_dir = "dist"`.
+- **Resolution**: Removed the `main` script entry from `wrangler.toml` to avoid conflicts when deploying via the Pages CLI.
+
+### Deployment Commands
+- **Local Dev**: `wrangler pages dev dist --d1 DB=noskrien-ziemu`
+- **Manual Deploy**: `npm run build && npx wrangler pages deploy`
+
 ## Current Status
 - **Extraction**: ✅ Complete & Tested (both Tautas and Sporta)
 - **Scraping**: ✅ Complete for all available history (1,876 Sporta + 4,461 Tautas)
-- **Database**: ✅ Deployed & Populated with 6,161 unique participants and 16,245 races
-- **API**: ✅ Running locally (`wrangler dev --remote`) on port 8787, connected to live database
-- **Frontend**: ✅ Complete with polished design, running on port 5173 (`npm run dev`)
-- **Testing**: ✅ 124/124 tests passing (10 comparison + 14 color consistency + 100 other tests)
+- **Database**: ✅ Deployed & Populated (6,161 unique participants, 16,245 races)
+- **Deployment**: ✅ Successfully migrated to Cloudflare Pages (Unified Frontend + API)
+- **API**: ✅ Integrated via Pages Functions (`functions/api/[[path]].ts`)
+- **Frontend**: ✅ Complete with polished design, glass morphism, and dual plot modes
+- **Testing**: ✅ 124/124 tests passing
 - **Data Quality**: ⚠️ Season field unreliable for some participants (mitigated by date-based derivation)
-- **Design**: ✅ Production-ready with glass morphism, dual plot modes, and social media integration
 - **Comparison Accuracy**: ✅ Correctly finds all common races, handles Tautas/Sporta separation
