@@ -37,12 +37,33 @@ export const calculatePace = (timeSeconds: number, km: number) => {
     return timeSeconds / km; // seconds per km
 };
 
+// Derive season from race date (e.g., "2023-11-26" -> "2023-2024")
+// Noskrien Ziemu season runs from November to March
+export const deriveSeasonFromDate = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1; // 1-12
+
+    // If race is Nov or Dec, season is YYYY-(YYYY+1)
+    // If race is Jan-Mar, season is (YYYY-1)-YYYY
+    if (month >= 11) {
+        return `${year}-${year + 1}`;
+    } else {
+        return `${year - 1}-${year}`;
+    }
+};
+
 export function compareRaces(hist1: HistoryResponse, hist2: HistoryResponse, category: string) {
     const commonRaces = [];
 
     const p2RacesMap = new Map();
     if (hist2.races) {
-        hist2.races.forEach(r => p2RacesMap.set(r.date, r));
+        hist2.races.forEach(r => {
+            const cat = r.category ? r.category.trim() : 'Tautas';
+            const loc = r.location ? r.location.trim() : '';
+            const key = `${r.date}|${loc}|${cat}`;
+            p2RacesMap.set(key, r);
+        });
     }
 
     if (hist1.races) {
@@ -50,13 +71,13 @@ export function compareRaces(hist1: HistoryResponse, hist2: HistoryResponse, cat
             const cat1 = r1.category ? r1.category.trim() : 'Tautas';
             if (cat1 !== category) continue;
 
-            const r2 = p2RacesMap.get(r1.date);
-            if (r2) {
-                const cat2 = r2.category ? r2.category.trim() : 'Tautas';
-                if (cat2 !== category) continue;
+            // Build composite key to match races by date, location, and category
+            const loc1 = r1.location ? r1.location.trim() : '';
+            const key = `${r1.date}|${loc1}|${cat1}`;
+            const r2 = p2RacesMap.get(key);
 
-                // Normalize locations
-                const loc1 = r1.location ? r1.location.trim() : '';
+            if (r2) {
+                // Already verified category matches through the key
                 const loc2 = r2.location ? r2.location.trim() : '';
 
                 if (loc1 === loc2) {
@@ -79,7 +100,7 @@ export function compareRaces(hist1: HistoryResponse, hist2: HistoryResponse, cat
                                 commonRaces.push({
                                     date: r1.date,
                                     race: r1.location,
-                                    season: r1.season,
+                                    season: deriveSeasonFromDate(r1.date),
                                     pace1,
                                     pace2,
                                     diff,

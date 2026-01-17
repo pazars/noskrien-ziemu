@@ -345,12 +345,70 @@ Enhanced chart readability with optimized Y-axis tick intervals and dynamic scal
 - [src/components/RaceComparison.tsx:704-708](src/components/RaceComparison.tsx#L704-L708) - Starpība Y-axis with dynamic domain/ticks
 - [src/components/RaceComparison.tsx:732-736](src/components/RaceComparison.tsx#L732-L736) - Temps Y-axis with 180s minimum and 30s ticks
 
+## 14. Critical Bug Fixes (January 17, 2026)
+Fixed two critical bugs affecting race comparison accuracy and visual consistency.
+
+### Bug 1: Missing Race Matches
+**Problem**: Comparison logic was only finding 6 common races between Dāvis Pazars and Kristaps Bērziņš instead of the correct 10. The Map was keyed only by `date`, causing races on the same date but different categories (Tautas vs Sporta) to overwrite each other.
+
+**Example**: On 2023-11-26 at Smiltene, Kristaps ran both:
+- Tautas distance: 10.40km in 41:02
+- Sporta distance: 10.40km in 39:30
+
+The second race would overwrite the first in the Map, losing valid matches.
+
+**Solution**: Changed Map key from `date` to composite key `date|location|category` to properly distinguish races.
+
+**Files Modified**:
+- [src/utils/comparison.ts:45-50](src/utils/comparison.ts#L45-L50) - Build composite key when populating Map
+- [src/utils/comparison.ts:58-61](src/utils/comparison.ts#L58-L61) - Build composite key when looking up matches
+
+**Tests Added**:
+- Regression test for multiple races on same date with different categories
+- Test verifying correct Tautas vs Sporta matching
+
+### Bug 2: Unicolor Season Plot
+**Problem**: Season-based dot colors broke when participants were swapped (e.g., Kristaps as p1, Dāvis as p2). Investigation revealed a database quality issue: Kristaps Bērziņš has all Tautas races incorrectly assigned to season "2019-2020" in the database, even races from 2023-2026. When seasons were taken from `r1.season` (participant 1's database record), swapping participants caused all races to show the same season.
+
+**Root Cause**: Database schema design flaw - each participant record has a single `season` field, but participants race across multiple seasons. During duplicate merging, all seasons were collapsed into one record with season="2019-2020".
+
+**Solution**: Derive season from race date instead of unreliable database field:
+- Nov-Dec races → `YYYY-(YYYY+1)` (e.g., 2023-11-26 → "2023-2024")
+- Jan-Mar races → `(YYYY-1)-YYYY` (e.g., 2024-01-13 → "2023-2024")
+
+**Files Modified**:
+- [src/utils/comparison.ts:40-53](src/utils/comparison.ts#L40-L53) - Added `deriveSeasonFromDate()` function
+- [src/utils/comparison.ts:103](src/utils/comparison.ts#L103) - Use derived season instead of `r1.season`
+
+**Tests Added**:
+- Test for season derivation logic (all months Nov-Mar)
+- Test verifying derived seasons override incorrect database values
+- Test confirming season preservation in comparison results
+
+**Impact**:
+- ✅ Dāvis vs Kristaps now correctly shows 10 common races (was 6)
+- ✅ Season colors work correctly regardless of participant order
+- ✅ All 124 tests passing (10 comparison tests, including 4 new season tests)
+
+### Database Issue Identified
+Query revealed extent of the problem:
+```sql
+-- Kristaps Bērziņš Tautas record (id=2106)
+-- ALL races from 2019-2026 assigned to season "2019-2020"
+SELECT date, location, season FROM races
+WHERE participant_id = 2106
+ORDER BY date;
+```
+
+This affects visual consistency but is now mitigated by deriving seasons from dates in the comparison logic.
+
 ## Current Status
 - **Extraction**: ✅ Complete & Tested (both Tautas and Sporta)
 - **Scraping**: ✅ Complete for all available history (1,876 Sporta + 4,461 Tautas)
 - **Database**: ✅ Deployed & Populated with 6,161 unique participants and 16,245 races
 - **API**: ✅ Running locally (`wrangler dev --remote`) on port 8787, connected to live database
 - **Frontend**: ✅ Complete with polished design, running on port 5173 (`npm run dev`)
-- **Testing**: ✅ 120/120 tests passing (14 color consistency + 106 existing tests)
-- **Data Quality**: ✅ Zero duplicates, proper Latvian character usage, both distances integrated
+- **Testing**: ✅ 124/124 tests passing (10 comparison + 14 color consistency + 100 other tests)
+- **Data Quality**: ⚠️ Season field unreliable for some participants (mitigated by date-based derivation)
 - **Design**: ✅ Production-ready with glass morphism, dual plot modes, and social media integration
+- **Comparison Accuracy**: ✅ Correctly finds all common races, handles Tautas/Sporta separation
