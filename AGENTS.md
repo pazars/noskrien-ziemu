@@ -222,6 +222,46 @@ Fixed autocomplete suggestions to only show participants who have raced in the s
 
 **Test Results**: All 106 tests passing (18 new ParticipantSelector tests + 17 new worker tests + 71 existing tests)
 
+## 11. Latvian Localization (January 17, 2026)
+Comprehensive translation of user-facing text to Latvian for native audience.
+
+### Translations Applied
+**ParticipantSelector Component** ([src/components/ParticipantSelector.tsx](src/components/ParticipantSelector.tsx)):
+- Search placeholder: "Search by name..." → **"Meklēt..."**
+  - Simplified from "Meklēt pēc vārda..." to modern, concise UI style
+- Empty state: "Participant not found" already translated as "Dalībnieks nav atrasts"
+- Distance suggestion already in Latvian
+
+**RaceComparison Component** ([src/components/RaceComparison.tsx](src/components/RaceComparison.tsx)):
+- Participant labels: "Runner 1/2" → **"1. dalībnieks" / "2. dalībnieks"**
+  - Period after number for natural Latvian format
+- Plot mode toggle:
+  - "Difference" → **"Starpība"**
+  - "Individual" → **"Temps"** (showing individual pace)
+- Empty state heading: "Head-to-Head Comparison" → **"Rezultātu salīdzinājums"**
+- Empty state description: Simplified to **"Izvēlies divus dalībniekus, lai salīdzinātu viņu rezultātus"**
+  - Used "divus" (word) instead of "2" (number) for natural prose
+  - Removed redundant "savā starpā" phrase
+- Y-axis label: "Pace Diff /km" → **"Tempa starpība"**
+- Footer attribution: "Made by" → **"Izstrādāja"**
+- Social link updated to Instagram (@pazars)
+
+### Translation Quality
+- **Natural phrasing**: Used conversational Latvian rather than literal translations
+- **Conciseness**: Removed redundant phrases common in English but unnecessary in Latvian
+- **UI conventions**: Followed modern Latvian UI patterns (e.g., "1. dalībnieks" vs "Dalībnieks 1")
+- **Consistency**: Maintained professional tone across all components
+
+### Files Modified
+- [src/components/ParticipantSelector.tsx:214](src/components/ParticipantSelector.tsx#L214) - Search placeholder
+- [src/components/RaceComparison.tsx:204-213](src/components/RaceComparison.tsx#L204-L213) - Plot mode toggle labels
+- [src/components/RaceComparison.tsx:457](src/components/RaceComparison.tsx#L457) - Runner 1 label
+- [src/components/RaceComparison.tsx:485](src/components/RaceComparison.tsx#L485) - Runner 2 label
+- [src/components/RaceComparison.tsx:538](src/components/RaceComparison.tsx#L538) - Empty state heading
+- [src/components/RaceComparison.tsx:541](src/components/RaceComparison.tsx#L541) - Empty state description
+- [src/components/RaceComparison.tsx:682](src/components/RaceComparison.tsx#L682) - Y-axis label
+- [src/components/RaceComparison.tsx:762](src/components/RaceComparison.tsx#L762) - Footer attribution
+
 ## Current Status
 - **Extraction**: ✅ Complete & Tested (both Tautas and Sporta)
 - **Scraping**: ✅ Complete for all available history (1,876 Sporta + 4,461 Tautas)
