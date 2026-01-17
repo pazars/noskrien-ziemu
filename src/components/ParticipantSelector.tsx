@@ -153,7 +153,14 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
                                 cursor: 'pointer',
                                 transition: 'all 0.2s'
                             }}
-                            onClick={handleClear}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleClear();
+                            }}
+                            onMouseDown={(e) => {
+                                e.preventDefault();
+                            }}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.background = '#F1F5F9';
                                 e.currentTarget.style.color = '#64748B';
