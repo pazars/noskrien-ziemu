@@ -103,4 +103,29 @@ describe('compareRaces', () => {
         const matchesT = compareRaces(hist1, hist2, 'Tautas');
         expect(matchesT).toHaveLength(0); // P2 is filtered out
     });
+
+    it('should return races sorted chronologically', () => {
+        const hist1: HistoryResponse = {
+            name: 'P1',
+            races: [
+                { date: '2024-02-01', result: '30:00', km: '5', location: 'Race2', season: '2024', category: 'Tautas' },
+                { date: '2024-01-01', result: '30:00', km: '5', location: 'Race1', season: '2024', category: 'Tautas' },
+                { date: '2024-03-01', result: '30:00', km: '5', location: 'Race3', season: '2024', category: 'Tautas' }
+            ]
+        };
+        const hist2: HistoryResponse = {
+            name: 'P2',
+            races: [
+                { date: '2024-02-01', result: '31:00', km: '5', location: 'Race2', season: '2024', category: 'Tautas' },
+                { date: '2024-01-01', result: '31:00', km: '5', location: 'Race1', season: '2024', category: 'Tautas' },
+                { date: '2024-03-01', result: '31:00', km: '5', location: 'Race3', season: '2024', category: 'Tautas' }
+            ]
+        };
+
+        const matches = compareRaces(hist1, hist2, 'Tautas');
+        expect(matches).toHaveLength(3);
+        expect(matches[0].race).toBe('Race1');
+        expect(matches[1].race).toBe('Race2');
+        expect(matches[2].race).toBe('Race3');
+    });
 });
