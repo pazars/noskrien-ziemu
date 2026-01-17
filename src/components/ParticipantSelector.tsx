@@ -234,10 +234,15 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
                                     cursor: 'pointer',
                                     transition: 'all 0.2s'
                                 }}
-                                onClick={() => {
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
                                     setQuery('');
                                     setResults([]);
                                     inputRef.current?.focus();
+                                }}
+                                onMouseDown={(e) => {
+                                    e.preventDefault();
                                 }}
                                 onMouseEnter={(e) => {
                                     e.currentTarget.style.background = '#F1F5F9';
