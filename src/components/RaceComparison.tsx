@@ -325,11 +325,18 @@ export default function RaceComparison() {
                 alignItems: 'center'
             }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '4px' }}>
-                    <img
-                        src="/LOGO-NZ-PNG.png"
-                        alt="Noskrien Ziemu"
-                        style={{ height: '40px', width: 'auto', maxWidth: '180px', objectFit: 'contain' }}
-                    />
+                    <a
+                        href="https://noskrienziemu.lv"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: 'block', cursor: 'pointer' }}
+                    >
+                        <img
+                            src="/LOGO-NZ-PNG.png"
+                            alt="Noskrien Ziemu"
+                            style={{ height: '40px', width: 'auto', maxWidth: '180px', objectFit: 'contain' }}
+                        />
+                    </a>
                 </div>
                 <CategoryToggle value={category} onChange={setCategory} />
                 <div /> {/* Spacer for centering toggle */}
