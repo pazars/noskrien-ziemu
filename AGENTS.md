@@ -48,9 +48,15 @@ We built a full-window React application to compare head-to-head performance.
     - **Visualization**: Line chart showing Pace Difference (sec/km) over time for common events.
     - **Robustness**: Validated against edge cases (e.g., mismatched distances in same event) via unit tests in `src/utils/comparison.test.ts`.
 
+## 6. UI/UX Refinements
+After the initial MVP implementation, we performed several design and UX improvements:
+- **Design Update** (feef8a6): Comprehensive visual redesign with improved styling across all components (App.css, index.css, ParticipantSelector, RaceComparison).
+- **Element Placement** (d53d4c3): Adjusted layout and positioning in RaceComparison component for better user experience.
+- **Port Configuration** (8a376a1): Fixed Wrangler port configuration in wrangler.toml to ensure consistent API access. Updated UI components to reference correct port.
+
 ## Current Status
 - **Extraction**: ✅ Complete & Tested
 - **Scraping**: ✅ Complete for all available history
 - **Database**: ✅ Deployed & Populated
-- **API**: ✅ API is running locally (`wrangler dev --remote`) and connected to the live database.
-- **Frontend**: ✅ Complete, refined, and tested against regression bugs.
+- **API**: ✅ API is running locally (`wrangler dev --remote`) on port 8787 and connected to the live database.
+- **Frontend**: ✅ Complete with polished design, running on port 5173 (`npm run dev`).
