@@ -603,10 +603,10 @@ export default function RaceComparison() {
                         <Minus style={{ width: '32px', height: '32px', color: '#94A3B8' }} />
                     </div>
                     <h3 style={{ fontSize: '18px', fontWeight: 500, color: '#1E293B', marginBottom: '8px' }}>
-                        No Common Races
+                        Nav kopīgu skrējienu
                     </h3>
                     <p style={{ color: '#64748B', maxWidth: '400px' }}>
-                        {displayP1Name || p1Name} and {displayP2Name || p2Name} haven't competed in the same {category} class events.
+                        {displayP1Name || p1Name} un {displayP2Name || p2Name} nav piedalījušies kopīgos {category} klases skrējienos.
                     </p>
                 </div>
             )}
