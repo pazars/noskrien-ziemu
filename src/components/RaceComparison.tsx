@@ -289,7 +289,26 @@ export default function RaceComparison() {
                     fetch(`http://localhost:8787/api/history?name=${encodeURIComponent(p2Name)}`).then(res => res.json()) as Promise<HistoryResponse>
                 ]);
 
-                const commonRaces = compareRaces(hist1, hist2, category);
+                let commonRaces = compareRaces(hist1, hist2, category);
+
+                // Determine if we should swap runners so the faster one (more wins) has positive y-axis
+                if (commonRaces.length > 0) {
+                    const p1Wins = commonRaces.filter(r => r.diff < 0).length;
+                    const p2Wins = commonRaces.filter(r => r.diff > 0).length;
+
+                    // If p1 has more wins, invert the diff so their wins show as positive
+                    if (p1Wins > p2Wins) {
+                        commonRaces = commonRaces.map(race => ({
+                            ...race,
+                            pace1: race.pace2,
+                            pace2: race.pace1,
+                            p1Time: race.p2Time,
+                            p2Time: race.p1Time,
+                            diff: -race.diff
+                        }));
+                    }
+                }
+
                 setChartData(commonRaces);
             } catch (error) {
                 console.error("Error comparing:", error);
