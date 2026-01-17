@@ -77,10 +77,58 @@ Comprehensive bug fixing and feature enhancement phase addressing multiple issue
 ### Testing
 - **Comprehensive Test Suite** (188fa6b): Added tests for Latvian character normalization (worker/index.test.ts) and race comparison logic (src/utils/comparison.test.ts). All 27 tests passing.
 
+## 8. Sporta Distance Integration (January 17, 2026)
+Successfully scraped and integrated **Sporta distance** data alongside existing **Tautas distance** data.
+
+### Data Collection
+- **Scraper**: Created `scripts/scrape_sporta.ts` targeting Sporta URLs (VS.HTM for men, SS.HTM for women)
+- **Coverage**: 1,876 Sporta participants across 9 seasons (2017-2026)
+- **Data Structure**: Matched existing Tautas format exactly for seamless integration
+- **Missing Seasons**: 2020-2021 and 2021-2022 (consistent with Tautas - 404 errors)
+
+### Database Import
+- **Combined Dataset**: 6,337 participants (4,461 Tautas + 1,876 Sporta) with 16,245 total races
+- **SQL Generation**: 3.0 MB import file with 22,582 statements
+- **Import Performance**: Executed in 310ms via Wrangler D1
+- **Data Integrity**: All races and participants successfully imported
+
+### Duplicate Resolution
+- **Duplicates Found**: 176 participant records in 83 groups (cross-season Latvian character variations)
+- **Merge Process**: Used existing Latvian merge migration (`/api/migrate/latvian-duplicates`)
+- **Selection Logic**: Kept names with most Latvian characters, natural casing over uppercase
+- **Final Count**: 6,161 unique participants (176 duplicates merged)
+- **Race Updates**: 561 race records updated to point to canonical participants
+
+### Testing & Validation
+- **Test Coverage**: 22 tests across 4 new test suites (all passing)
+  - `scripts/scrape_sporta.test.ts` - 7 tests (URL construction, data extraction)
+  - `scripts/generate_sql.test.ts` - 4 tests (SQL generation, distance support)
+  - `scripts/check_duplicates.test.ts` - 4 tests (normalization, grouping logic)
+  - `scripts/import_to_db.test.ts` - 7 tests (import preparation, validation)
+- **Duplicate Verification**: 0 duplicate groups remaining in database (confirmed via SQL query)
+- **API Testing**: Sporta participants searchable and returning correct results
+
+### Scripts & Documentation
+- **Scraper**: `scripts/scrape_sporta.ts` (with test version for single season)
+- **Import**: `scripts/import_to_db.sh` (safe import with verification)
+- **Duplicate Detection**: `scripts/check_duplicates.ts` (cross-season analysis)
+- **Documentation**:
+  - `SPORTA-DISTANCE-SUMMARY.md` - Technical overview
+  - `IMPORT-CHECKLIST.md` - Step-by-step import guide
+  - `IMPORT-COMPLETE.md` - Completion summary
+
+### Sample Merges
+Notable duplicate resolutions:
+- **Kristaps Berzins** → **Kristaps Bērziņš** (Tautas, 4 seasons)
+- **Edžus Cābulis** / **Edzus Cabulis** → **Edžus Cābulis** (Tautas, 6 seasons)
+- **Rihards Sinicins** → **Rihards Siņicins** (Sporta, 3 seasons)
+- **Ilze Kronberga** / **ILZE KRONBERGA** → **Ilze Kronberga** (Tautas, natural casing)
+
 ## Current Status
-- **Extraction**: ✅ Complete & Tested
-- **Scraping**: ✅ Complete for all available history
-- **Database**: ✅ Deployed & Populated
-- **API**: ✅ API is running locally (`wrangler dev --remote`) on port 8787 and connected to the live database.
-- **Frontend**: ✅ Complete with polished design, running on port 5173 (`npm run dev`).
-- **Testing**: ✅ 27/27 tests passing, covering normalization, comparison logic, and edge cases.
+- **Extraction**: ✅ Complete & Tested (both Tautas and Sporta)
+- **Scraping**: ✅ Complete for all available history (1,876 Sporta + 4,461 Tautas)
+- **Database**: ✅ Deployed & Populated with 6,161 unique participants and 16,245 races
+- **API**: ✅ Running locally (`wrangler dev --remote`) on port 8787, connected to live database
+- **Frontend**: ✅ Complete with polished design, running on port 5173 (`npm run dev`)
+- **Testing**: ✅ 49/49 tests passing (27 original + 22 Sporta integration tests)
+- **Data Quality**: ✅ Zero duplicates, proper Latvian character usage, both distances integrated
