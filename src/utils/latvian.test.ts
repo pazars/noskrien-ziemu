@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeLatvian, countLatvianChars, hasNaturalCasing } from './latvian';
+import { normalizeLatvian, countLatvianChars, hasNaturalCasing, deriveSeasonFromDate } from './latvian';
 
 describe('Latvian character utilities', () => {
   describe('normalizeLatvian', () => {
@@ -53,6 +53,34 @@ describe('Latvian character utilities', () => {
     it('should handle names with Latvian characters', () => {
       expect(hasNaturalCasing('Kristaps Bērziņš')).toBe(true);
       expect(hasNaturalCasing('KRISTAPS BĒRZIŅŠ')).toBe(false);
+    });
+  });
+
+  describe('deriveSeasonFromDate', () => {
+    it('should derive season for November dates', () => {
+      expect(deriveSeasonFromDate('2023-11-26')).toBe('2023-2024');
+      expect(deriveSeasonFromDate('2024-11-10')).toBe('2024-2025');
+    });
+
+    it('should derive season for December dates', () => {
+      expect(deriveSeasonFromDate('2023-12-31')).toBe('2023-2024');
+    });
+
+    it('should derive season for January dates', () => {
+      expect(deriveSeasonFromDate('2024-01-13')).toBe('2023-2024');
+    });
+
+    it('should derive season for February dates', () => {
+      expect(deriveSeasonFromDate('2024-02-18')).toBe('2023-2024');
+    });
+
+    it('should derive season for March dates', () => {
+      expect(deriveSeasonFromDate('2024-03-24')).toBe('2023-2024');
+    });
+
+    it('should handle edge cases', () => {
+      expect(deriveSeasonFromDate('2023-11-01')).toBe('2023-2024');
+      expect(deriveSeasonFromDate('2024-03-31')).toBe('2023-2024');
     });
   });
 });

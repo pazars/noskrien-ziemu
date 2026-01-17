@@ -75,3 +75,21 @@ export function hasNaturalCasing(name: string): boolean {
 
   return !allUppercase;
 }
+
+/**
+ * Derive season from race date
+ * Noskrien Ziemu season runs November to March
+ * Nov-Dec YYYY → "YYYY-(YYYY+1)"
+ * Jan-Mar YYYY → "(YYYY-1)-YYYY"
+ */
+export function deriveSeasonFromDate(date: string): string {
+  const [year, month] = date.split('-').map(Number);
+
+  // November or December: season is YYYY-(YYYY+1)
+  if (month >= 11) {
+    return `${year}-${year + 1}`;
+  }
+
+  // January, February, March: season is (YYYY-1)-YYYY
+  return `${year - 1}-${year}`;
+}
