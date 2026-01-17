@@ -552,6 +552,10 @@ export default function RaceComparison() {
                                         tick={{ fill: '#64748B', fontSize: 11 }}
                                         tickLine={{ stroke: '#CBD5E1' }}
                                         axisLine={{ stroke: '#CBD5E1' }}
+                                        domain={[
+                                            (dataMin: number) => Math.min(0, Math.floor(dataMin / 10) * 10),
+                                            (dataMax: number) => Math.max(0, Math.ceil(dataMax / 10) * 10)
+                                        ]}
                                         tickFormatter={(val) => {
                                             const absVal = Math.abs(Math.round(val));
                                             const sign = val > 0 ? '+' : val < 0 ? '-' : '';
