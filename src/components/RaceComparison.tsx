@@ -202,7 +202,7 @@ const PlotModeToggle = ({ value, onChange }: { value: 'difference' | 'individual
                 onClick={() => onChange('difference')}
                 style={{ padding: '6px 14px' }}
             >
-                Difference
+                Starpība
             </span>
             <span
                 ref={indivRef}
@@ -210,7 +210,7 @@ const PlotModeToggle = ({ value, onChange }: { value: 'difference' | 'individual
                 onClick={() => onChange('individual')}
                 style={{ padding: '6px 14px' }}
             >
-                Individual
+                Temps
             </span>
         </div>
     );
@@ -454,7 +454,7 @@ export default function RaceComparison() {
                 }}>
                     <div style={{ flex: 1 }}>
                         <ParticipantSelector
-                            label="Runner 1"
+                            label="1. dalībnieks"
                             onSelect={setP1Name}
                             selectedName={p1Name}
                             accentColor="#00AEEF"
@@ -482,7 +482,7 @@ export default function RaceComparison() {
 
                     <div style={{ flex: 1 }}>
                         <ParticipantSelector
-                            label="Runner 2"
+                            label="2. dalībnieks"
                             onSelect={setP2Name}
                             selectedName={p2Name}
                             accentColor="#F97316"
@@ -535,10 +535,10 @@ export default function RaceComparison() {
                         <Snowflake style={{ width: '40px', height: '40px', color: '#00AEEF' }} />
                     </div>
                     <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#1E293B', marginBottom: '8px' }}>
-                        Head-to-Head Comparison
+                        Rezultātu salīdzinājums
                     </h2>
                     <p style={{ color: '#64748B', maxWidth: '400px' }}>
-                        Select two participants to compare their race performance across all common events.
+                        Izvēlies divus dalībniekus, lai salīdzinātu viņu rezultātus
                     </p>
                 </div>
             )}
@@ -679,7 +679,7 @@ export default function RaceComparison() {
                                                 return `${sign}${secs}`;
                                             }}
                                             label={{
-                                                value: 'Pace Diff /km',
+                                                value: 'Tempa starpība',
                                                 angle: -90,
                                                 position: 'center',
                                                 fill: '#64748B',
@@ -759,9 +759,9 @@ export default function RaceComparison() {
                 color: '#94A3B8',
                 fontWeight: 400
             }}>
-                Made by{' '}
+                Izstrādāja{' '}
                 <a
-                    href="https://twitter.com/davispazars"
+                    href="https://www.instagram.com/pazars"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{

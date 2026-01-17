@@ -211,7 +211,7 @@ export default function ParticipantSelector({ label, onSelect, selectedName, acc
                                 outline: 'none',
                                 boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
                             }}
-                            placeholder="Search by name..."
+                            placeholder="Meklēt..."
                             value={query}
                             onChange={(e) => {
                                 setQuery(e.target.value);
