@@ -26,11 +26,12 @@ export default {
             // Return DISTINCT names matching query
             // Group by name/gender to avoid duplicates
             // We select one ID just to have a key, but frontend should rely on name
+            // COLLATE NOCASE ensures case-insensitive search
             const query = `
-                SELECT MIN(id) as id, name, gender 
-                FROM participants 
-                WHERE name LIKE ? 
-                GROUP BY name, gender 
+                SELECT MIN(id) as id, name, gender
+                FROM participants
+                WHERE name LIKE ? COLLATE NOCASE
+                GROUP BY name, gender
                 LIMIT 10
             `;
 
