@@ -17,7 +17,7 @@ fi
 # First, let's identify the duplicates
 echo ""
 echo "Identifying duplicates..."
-wrangler d1 execute noskrien-ziemu-db --remote --command "
+wrangler d1 execute noskrien-ziemu --remote --command "
 WITH normalized AS (
   SELECT
     id,
