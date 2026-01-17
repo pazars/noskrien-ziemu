@@ -7,6 +7,11 @@ import { describe, it, expect } from 'vitest';
  * work together to filter participants by distance category.
  */
 
+// Helper function to get the opposite distance (simulates runtime behavior)
+function getOtherDistance(distance: 'Sporta' | 'Tautas'): 'Sporta' | 'Tautas' {
+    return distance === 'Tautas' ? 'Sporta' : 'Tautas';
+}
+
 describe('ParticipantSelector - Distance Filtering Integration', () => {
     describe('API Query URL construction', () => {
         it('should construct URL with distance parameter when distance is provided', () => {
@@ -125,7 +130,9 @@ describe('ParticipantSelector - Distance Filtering Integration', () => {
 
     describe('Empty state messages', () => {
         it('should suggest Sporta distance when Tautas is selected and no results found', () => {
-            const distance = 'Tautas';
+            // Test the logic that switches between distances
+            type Distance = 'Sporta' | 'Tautas';
+            const distance: Distance = 'Tautas';
             const hasResults = false;
             const query = 'Kristaps';
 
@@ -133,7 +140,7 @@ describe('ParticipantSelector - Distance Filtering Integration', () => {
             let suggestion = null;
 
             if (distance && !hasResults && query.length >= 2) {
-                const otherDistance = distance === 'Tautas' ? 'Sporta' : 'Tautas';
+                const otherDistance = getOtherDistance(distance);
                 suggestion = `Varbūt viņš/-a skrēja ${otherDistance} distancē?`;
             }
 
@@ -142,14 +149,16 @@ describe('ParticipantSelector - Distance Filtering Integration', () => {
         });
 
         it('should suggest Tautas distance when Sporta is selected and no results found', () => {
-            const distance = 'Sporta';
+            // Test the logic that switches between distances
+            type Distance = 'Sporta' | 'Tautas';
+            const distance: Distance = 'Sporta';
             const hasResults = false;
             const query = 'Davis';
 
             let suggestion = null;
 
             if (distance && !hasResults && query.length >= 2) {
-                const otherDistance = distance === 'Tautas' ? 'Sporta' : 'Tautas';
+                const otherDistance = getOtherDistance(distance);
                 suggestion = `Varbūt viņš/-a skrēja ${otherDistance} distancē?`;
             }
 
@@ -187,14 +196,15 @@ describe('ParticipantSelector - Distance Filtering Integration', () => {
         });
 
         it('should not show suggestion when query is too short', () => {
-            const distance = 'Tautas';
+            type Distance = 'Sporta' | 'Tautas';
+            const distance: Distance = 'Tautas';
             const hasResults = false;
             const query = 'D';
 
             let suggestion = null;
 
             if (distance && !hasResults && query.length >= 2) {
-                const otherDistance = distance === 'Tautas' ? 'Sporta' : 'Tautas';
+                const otherDistance = getOtherDistance(distance);
                 suggestion = `Varbūt viņš/-a skrēja ${otherDistance} distancē?`;
             }
 
@@ -205,22 +215,22 @@ describe('ParticipantSelector - Distance Filtering Integration', () => {
     describe('Real-world scenarios', () => {
         it('should filter correctly: Dāvis Pazars only in Tautas', () => {
             // Simulating the actual use case from the issue
-            const participantName = 'Dāvis Pazars';
-            const actualDistance = 'Tautas';
-            const selectedDistance = 'Sporta';
+            type Distance = 'Sporta' | 'Tautas';
+            const actualDistance: Distance = 'Tautas';
+            const selectedDistance: Distance = 'Sporta';
 
             // Should NOT appear in results
-            const shouldAppear = actualDistance === selectedDistance;
+            const shouldAppear = (actualDistance as Distance) === (selectedDistance as Distance);
             expect(shouldAppear).toBe(false);
         });
 
         it('should filter correctly: Participant exists in selected distance', () => {
-            const participantName = 'Kristaps Bērziņš';
-            const actualDistance = 'Sporta';
-            const selectedDistance = 'Sporta';
+            type Distance = 'Sporta' | 'Tautas';
+            const actualDistance: Distance = 'Sporta';
+            const selectedDistance: Distance = 'Sporta';
 
             // Should appear in results
-            const shouldAppear = actualDistance === selectedDistance;
+            const shouldAppear = (actualDistance as Distance) === (selectedDistance as Distance);
             expect(shouldAppear).toBe(true);
         });
 
