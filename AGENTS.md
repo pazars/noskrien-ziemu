@@ -54,9 +54,33 @@ After the initial MVP implementation, we performed several design and UX improve
 - **Element Placement** (d53d4c3): Adjusted layout and positioning in RaceComparison component for better user experience.
 - **Port Configuration** (8a376a1): Fixed Wrangler port configuration in wrangler.toml to ensure consistent API access. Updated UI components to reference correct port.
 
+## 7. Bug Fixes & Enhancements (14 commits)
+Comprehensive bug fixing and feature enhancement phase addressing multiple issues:
+
+### UX/Interaction Fixes
+- **Event Bubbling** (d2f2767, e285c01): Fixed X button event propagation in both search and selected states to prevent UI element deletion.
+- **Dropdown Navigation** (cfc655c): Added scroll-into-view for arrow key navigation in autocomplete dropdown.
+- **Click Outside Handler** (702629a): Added null check to prevent crashes when clicking outside dropdowns.
+- **Logo Interactivity** (9d20a8b, 9e7eb64): Made logo clickable with hover effects to open noskrienziemu.lv.
+
+### Chart & Data Visualization
+- **Y-axis Domain** (793df35): Ensured y-axis always includes 0 for proper scale reference.
+- **Y-axis Ordering** (8e3e730): Implemented logic to show faster runner (more wins) with positive y-axis values.
+- **Display Name Consistency** (b60f4cb): Fixed bug where swapped race data didn't swap display names, causing inconsistent win counts when runner order changed.
+- **Tooltip Simplification** (86104a2): Removed +/- signs from tooltip, relying on color coding for clarity.
+
+### Search & Database
+- **Case-insensitive Search** (6efa3bb): Added COLLATE NOCASE to SQL queries for proper case handling.
+- **Latvian Character Search** (9b223eb, 2057615): Implemented normalizeLatvian() function and SQL REPLACE logic to handle both lowercase and uppercase Latvian special characters (ā, č, ē, ģ, ī, ķ, ļ, ņ, š, ū, ž).
+- **Database Migration** (b6d7ef5): Created scripts to merge duplicate participant records differing only by Latvian characters.
+
+### Testing
+- **Comprehensive Test Suite** (188fa6b): Added tests for Latvian character normalization (worker/index.test.ts) and race comparison logic (src/utils/comparison.test.ts). All 27 tests passing.
+
 ## Current Status
 - **Extraction**: ✅ Complete & Tested
 - **Scraping**: ✅ Complete for all available history
 - **Database**: ✅ Deployed & Populated
 - **API**: ✅ API is running locally (`wrangler dev --remote`) on port 8787 and connected to the live database.
 - **Frontend**: ✅ Complete with polished design, running on port 5173 (`npm run dev`).
+- **Testing**: ✅ 27/27 tests passing, covering normalization, comparison logic, and edge cases.
