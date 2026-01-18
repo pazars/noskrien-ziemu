@@ -88,6 +88,60 @@ When asked to refactor or simplify code:
 - `src/utils/comparison.ts`: Head-to-head matching logic
 - `wrangler.toml`: Cloudflare Pages configuration
 
+## Data Pipeline Commands
+
+### Adding a New Season
+
+When new race results are available:
+
+```bash
+# 1. Scrape the season (if not already done)
+npx tsx scripts/scrape.ts 2026-2027
+
+# 2. Sync to database (normalize + generate SQL + import)
+npm run pipeline:sync 2026-2027
+```
+
+This will:
+- Normalize data and merge duplicates
+- Generate idempotent SQL
+- Import to production database
+- Verify import counts
+
+### Rebuilding Database from Scratch
+
+⚠️ **Destructive operation** - only use for schema changes or data corruption recovery:
+
+```bash
+npm run pipeline:rebuild
+```
+
+This will:
+- Prompt for confirmation and optional backup
+- Apply schema-v2.sql
+- Normalize all historical data
+- Generate and import fresh SQL
+- Verify integrity
+
+### Manual Pipeline Steps
+
+For debugging or custom workflows:
+
+```bash
+# Normalize only
+npm run pipeline:normalize
+
+# Generate SQL only
+npm run pipeline:generate-sql
+
+# Or run scripts directly
+npx tsx scripts/pipeline/2-normalize-data.ts ./data
+npx tsx scripts/pipeline/3-generate-sql.ts ./data import_data.sql
+wrangler d1 execute noskrien-ziemu --remote --file=import_data.sql --yes
+```
+
+See [scripts/pipeline/README.md](scripts/pipeline/README.md) for detailed documentation.
+
 ## Best Practices
 
 1. **Read before modifying**: Always read existing code before making changes
