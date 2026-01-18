@@ -39,13 +39,16 @@ export default function ParticipantSelector({ label, onSelect, selectedParticipa
 
         const fetchParticipants = async () => {
             setLoading(true);
+            const url = new URL('/api/results', window.location.origin);
             try {
-                const url = new URL('/api/results', window.location.origin);
                 url.searchParams.set('name', query);
                 if (distance) {
                     url.searchParams.set('distance', distance);
                 }
                 const response = await fetch(url.toString());
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status} ${response.statusText}`);
+                }
                 const data = await response.json();
                 if (Array.isArray(data)) {
                     setResults(data);
@@ -54,7 +57,7 @@ export default function ParticipantSelector({ label, onSelect, selectedParticipa
                     setResults([]);
                 }
             } catch (error) {
-                console.error("Failed to fetch participants:", error);
+                console.error("Failed to fetch participants from", url.toString(), ":", error);
             } finally {
                 setLoading(false);
             }

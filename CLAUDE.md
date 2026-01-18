@@ -6,8 +6,8 @@ This document outlines specific workflows, commands, and best practices for work
 
 ### Quick Start
 ```bash
-npm run dev       # Frontend only (uses production API)
-npm run dev:api   # Full stack (local API + DB)
+npm run dev       # Frontend (localhost:5173). Proxies /api to localhost:8787
+npm run dev:api   # API & DB (localhost:8787). Requires dist/ folder to exist.
 ```
 
 ### 1. Frontend Development (Recommended)
@@ -16,8 +16,8 @@ npm run dev
 ```
 - **Purpose**: UI development with hot-reload
 - **Port**: 5173 (http://localhost:5173)
-- **API**: Uses production at https://noskrien-ziemu.pages.dev
-- **Use this for**: Component development, UI/UX work
+- **API**: Proxies to `localhost:8787` (local dev) or `noskrien-ziemu.pages.dev` (production)
+- **Use this for**: UI development with hot-reload (recommended)
 
 ### 2. Full Stack Development (Local API + D1)
 ```bash
@@ -26,19 +26,23 @@ npm run dev:api
 - **Purpose**: Local API with D1 database
 - **Port**: 8787 (http://localhost:8787)
 - **What it does**: Builds frontend and starts `wrangler pages dev`
-- **Use this for**: API changes, database testing
-- **Pro tip**: Run `npm run dev` in another terminal for UI hot-reload
+- **Use this for**: Running the API and D1 database locally.
+- **Note**: You must run `npm run build` once or have a `dist` folder before starting this.
+- **Workflow**: Run this in one terminal, and `npm run dev` in another for the best experience.
 
 #### First Time Database Setup
 The local D1 database persists automatically (wrangler v3+). Set it up once:
 
 ```bash
-# Apply schema
+# 1. Apply schema to a specific path
 wrangler d1 execute noskrien-ziemu --local --file=schema-v2.sql
 
-# Import data
-npx tsx scripts/pipeline/3-generate-sql.ts ./data import_local.sql
-wrangler d1 execute noskrien-ziemu --local --file=import_local.sql
+# 2. Import data to that same path
+npx tsx scripts/pipeline/3-generate-sql.ts ./data .wrangler/import_local.sql
+wrangler d1 execute noskrien-ziemu --local --file=.wrangler/import_local.sql
+
+# 3. Start Pages dev pointing to that path
+wrangler pages dev .
 ```
 
 This populates ~5,424 participants and ~22,494 races. Data persists across restarts.
