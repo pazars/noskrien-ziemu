@@ -4,12 +4,15 @@ This document outlines specific workflows, commands, and best practices for work
 
 ## Development Commands
 
-### 1. Database API Setup
+### 1. Database API Setup (Cloudflare Pages)
 ```bash
-wrangler dev --remote
+npm run build && wrangler pages dev dist --d1 DB=noskrien-ziemu --remote --port 8787
 ```
-- **Purpose**: Starts Cloudflare Worker with remote D1 database access
+- **Purpose**: Starts Cloudflare Pages dev server with remote D1 database access
 - **Port**: 8787
+- **Note**: Requires building the frontend first (`npm run build`)
+- **Important**: The `--remote` flag connects to the actual production D1 database
+- **Alternative**: Use `--live-reload` flag for auto-rebuild on changes
 - **⚠️ Important**: If port is taken, the process is already running - do NOT create a new one
 
 ### 2. UI Development Server
@@ -67,7 +70,8 @@ When asked to refactor or simplify code:
 
 ### Architecture
 - **Database**: Cloudflare D1 (remote)
-- **API**: Cloudflare Workers (`worker/index.ts`)
+- **API**: Cloudflare Pages Functions (`functions/api/[[path]].ts`)
+- **Legacy Worker**: `worker/index.ts` (kept for reference, not used in production)
 - **Frontend**: React + Vite + Tailwind CSS
 - **Charts**: Recharts library
 
@@ -77,11 +81,12 @@ When asked to refactor or simplify code:
 - Seasons 2020-2021 and 2021-2022 missing (404 errors)
 
 ### Key Files
-- `worker/index.ts`: API endpoints
+- `functions/api/[[path]].ts`: API endpoints (Cloudflare Pages Functions)
+- `worker/index.ts`: Legacy worker file (not used in production)
 - `src/components/ParticipantSelector.tsx`: Search autocomplete
 - `src/components/RaceComparison.tsx`: Comparison visualization
 - `src/utils/comparison.ts`: Head-to-head matching logic
-- `wrangler.toml`: Cloudflare Worker configuration
+- `wrangler.toml`: Cloudflare Pages configuration
 
 ## Best Practices
 
