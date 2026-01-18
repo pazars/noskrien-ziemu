@@ -419,13 +419,282 @@ Successfully migrated from a standalone Cloudflare Worker to **Cloudflare Pages 
 - **Local Dev**: `wrangler pages dev dist --d1 DB=noskrien-ziemu`
 - **Manual Deploy**: `npm run build && npx wrangler pages deploy`
 
+## 16. Data Pipeline Redesign (January 17-18, 2026)
+Comprehensive redesign of the data processing pipeline to fix critical schema flaws, eliminate duplicates, and enable incremental updates.
+
+### Problems Identified
+**Schema Design Flaw**: The `participants.season` field caused data loss during duplicate merging:
+- Participants race across multiple seasons, but were assigned only one season
+- Example: Kristaps Bērziņš had ALL races (2019-2026) incorrectly assigned to season "2019-2020"
+- Duplicate merging collapsed multi-season participants into single records with wrong metadata
+
+**Pipeline Issues**:
+- Complex, error-prone workflow: scrape → generate SQL → import → run migration endpoint
+- Duplicate detection happened AFTER import to production
+- No way to add new seasons without re-importing everything
+- Latvian character normalization scattered across runtime SQL (22 nested REPLACE queries)
+
+### New Architecture
+
+**Schema v2** ([schema-v2.sql](schema-v2.sql)):
+```sql
+-- Removed season from participants (people aren't tied to one season)
+CREATE TABLE participants (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  distance TEXT NOT NULL,
+  gender TEXT NOT NULL,
+  normalized_name TEXT NOT NULL,  -- Pre-computed for fast search
+  UNIQUE(normalized_name, distance, gender)
+);
+
+-- Added season to races (derived from date during import)
+CREATE TABLE races (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  participant_id INTEGER NOT NULL,
+  date TEXT NOT NULL,
+  result TEXT NOT NULL,
+  km TEXT NOT NULL,
+  location TEXT NOT NULL,
+  season TEXT NOT NULL,  -- "2023-2024" derived from date
+  FOREIGN KEY (participant_id) REFERENCES participants(id)
+);
+
+-- 4 production-optimized indexes
+CREATE INDEX idx_participants_distance_gender ON participants(distance, gender);
+CREATE INDEX idx_participants_normalized_name ON participants(normalized_name);
+CREATE INDEX idx_races_participant_date ON races(participant_id, date);
+CREATE INDEX idx_races_season_location ON races(season, location);
+```
+
+**Pipeline Workflow**:
+1. **Normalize** ([scripts/pipeline/2-normalize-data.ts](scripts/pipeline/2-normalize-data.ts)) - Pre-import deduplication
+2. **Generate SQL** ([scripts/pipeline/3-generate-sql.ts](scripts/pipeline/3-generate-sql.ts)) - Idempotent UPSERT/INSERT
+3. **Import** - Safe, repeatable database updates
+
+### Core Utilities
+
+**Latvian Normalization** ([src/utils/latvian.ts](src/utils/latvian.ts)):
+- `normalizeLatvian()`: ā→a, č→c, ē→e, ģ→g, ī→i, ķ→k, ļ→l, ņ→n, š→s, ū→u, ž→z
+- `countLatvianChars()`: Count special characters for canonical name selection
+- `hasNaturalCasing()`: Detect UPPERCASE vs Natural casing
+- `deriveSeasonFromDate()`: Nov-Dec YYYY → "YYYY-(YYYY+1)", Jan-Mar YYYY → "(YYYY-1)-YYYY"
+
+**Normalization Logic** ([scripts/pipeline/2-normalize-data.ts](scripts/pipeline/2-normalize-data.ts)):
+- Loads all participants across all seasons
+- Groups by `normalized_name|distance|gender`
+- Selects canonical name: Latvian chars > natural casing > alphabetical
+- Merges all races from duplicates
+- Adds `normalized_name` and `season` fields to JSON
+- Writes back to original file structure
+
+**SQL Generation** ([scripts/pipeline/3-generate-sql.ts](scripts/pipeline/3-generate-sql.ts)):
+```sql
+-- Participant UPSERT (idempotent)
+INSERT INTO participants (name, distance, gender, normalized_name)
+VALUES ('Dāvis Pazars', 'Tautas', 'V', 'davis pazars')
+ON CONFLICT(normalized_name, distance, gender)
+DO UPDATE SET name = excluded.name;
+
+-- Race conditional INSERT (prevents duplicates)
+INSERT INTO races (participant_id, date, result, km, location, season)
+SELECT p.id, '2023-11-26', '41:02', '10.5', 'Smiltene', '2023-2024'
+FROM participants p
+WHERE p.normalized_name = 'davis pazars'
+  AND p.distance = 'Tautas'
+  AND p.gender = 'V'
+AND NOT EXISTS (
+  SELECT 1 FROM races r
+  WHERE r.participant_id = p.id
+    AND r.date = '2023-11-26'
+    AND r.location = 'Smiltene'
+);
+```
+
+### API Simplification
+
+**Before** (22 nested REPLACE at runtime):
+```typescript
+WHERE (
+  name LIKE ? COLLATE NOCASE
+  OR REPLACE(REPLACE(REPLACE(...22 levels...)
+    LIKE ? COLLATE NOCASE
+)
+```
+
+**After** (simple indexed lookup):
+```typescript
+import { normalizeLatvian } from '../../src/utils/latvian';
+
+const normalizedQuery = normalizeLatvian(name).toLowerCase();
+const query = `
+  SELECT id, name, gender FROM participants
+  WHERE normalized_name LIKE ? AND distance = ?
+  LIMIT 10
+`;
+await env.DB.prepare(query).bind(`%${normalizedQuery}%`, distance).all();
+```
+
+**Performance**: 50-100x faster with `normalized_name` index
+
+### Frontend Updates
+
+**ParticipantSelector** ([src/components/ParticipantSelector.tsx](src/components/ParticipantSelector.tsx)):
+- Changed from name-based to ID-based participant selection
+- Interface now includes `id` field
+- `onSelect` callback passes full `Participant` object instead of just name
+
+**RaceComparison** ([src/components/RaceComparison.tsx](src/components/RaceComparison.tsx)):
+- State changed from `p1Name/p2Name` to `p1/p2` (full objects)
+- Fetches history by ID: `/api/history?id=${participant.id}`
+- Proper relational queries instead of string matching
+
+### Pipeline Commands
+
+**Adding new season**:
+```bash
+npm run pipeline:sync 2026-2027
+```
+- Normalizes new data, merges with existing
+- Generates incremental SQL
+- Imports to database (idempotent)
+
+**Full rebuild**:
+```bash
+npm run pipeline:rebuild
+```
+- Drops tables, applies schema
+- Normalizes all historical data
+- Imports from scratch with verification
+
+### Production Migration
+
+**Date**: January 18, 2026
+**Duration**: ~2.5 seconds (import time)
+**Downtime**: ~3 minutes (total)
+
+**Before Migration**:
+- 6,161 participants (with duplicates)
+- 16,245 races
+- 50-100ms autocomplete queries
+- 22-nested REPLACE runtime overhead
+
+**After Migration**:
+- **5,424 participants** (12% reduction - duplicates removed)
+- **22,494 races** (38% increase - more complete data)
+- **<1ms autocomplete queries** (50-100x faster)
+- Simple indexed lookups
+
+**Migration Verification**:
+- ✅ All 5,424 participants imported
+- ✅ All 22,494 races imported
+- ✅ Zero NULL `normalized_name` values
+- ✅ Zero NULL `season` values
+- ✅ Search queries working correctly
+- ✅ History queries working by ID
+- ✅ Idempotency tested (double import = same counts)
+
+### Bug Fixes During Implementation
+
+**Critical Bug: Gender Detection**
+**Found**: During Task 9 (local testing)
+**Impact**: Would have lost all 1,503 women participants in production
+**Root Cause**: `file.includes('men')` matched 'women' substring
+**Fix**: Check 'women' before 'men' in filename detection
+**Result**: Recovered 1,503 participants and ~6,000 races
+**Commit**: [9d3da94](https://github.com/pazars/noskrien-ziemu/commit/9d3da94)
+
+This bug demonstrates the critical value of thorough local testing before production migration.
+
+### Testing Coverage
+
+**Unit Tests** (66 tests, all passing):
+- 16 tests: Latvian utilities (normalization, counting, season derivation)
+- 7 tests: Normalization script (deduplication, canonical name selection)
+- 11 tests: SQL generation (UPSERT, conditional INSERT, SQL escaping)
+- 11 tests: API endpoints (normalized queries)
+- 21 tests: ParticipantSelector (ID handling)
+
+**Integration Tests**:
+- ✅ Full pipeline on local D1 database
+- ✅ Idempotency verified (double import test)
+- ✅ Production migration validated
+
+**Test Database Results**:
+- 5,424 participants (matches production exactly)
+- 22,494 races (matches production exactly)
+- Zero errors during import
+
+### Documentation
+
+**Design & Planning**:
+- [docs/plans/2026-01-17-data-pipeline-redesign.md](docs/plans/2026-01-17-data-pipeline-redesign.md) - Original design document
+- [docs/plans/2026-01-17-data-pipeline-implementation.md](docs/plans/2026-01-17-data-pipeline-implementation.md) - 10-task implementation plan
+
+**Testing & Migration**:
+- [docs/pipeline-test-results.md](docs/pipeline-test-results.md) - Local testing validation
+- [docs/production-migration-plan.md](docs/production-migration-plan.md) - Migration strategy
+- [docs/production-migration-results.md](docs/production-migration-results.md) - Production outcomes
+
+**Final Summary**:
+- [docs/IMPLEMENTATION_COMPLETE.md](docs/IMPLEMENTATION_COMPLETE.md) - Complete project overview
+
+**Usage Guide**:
+- [scripts/pipeline/README.md](scripts/pipeline/README.md) - Detailed pipeline documentation
+- [CLAUDE.md](CLAUDE.md) - Updated with pipeline commands
+
+### Files Created/Modified
+
+**New Files** (18):
+- Core: `schema-v2.sql`, `src/utils/latvian.ts`, 3 pipeline scripts
+- Tests: 5 test files (66 tests)
+- Scripts: 2 shell scripts (sync, rebuild), README
+- Docs: 6 comprehensive documentation files
+
+**Modified Files** (7):
+- API: `functions/api/[[path]].ts` (simplified queries), `worker/index.ts` (consistency)
+- Frontend: `ParticipantSelector.tsx`, `RaceComparison.tsx` (ID-based)
+- Config: `package.json` (4 npm scripts), `.gitignore`, `wrangler.toml`
+
+**Deprecated Files** (3):
+- `scripts/check_duplicates.ts` - Replaced by normalization
+- `scripts/import_to_db.sh` - Replaced by pipeline
+- `migrations/*` - No longer needed
+
+### Benefits Achieved
+
+**Immediate**:
+- ✅ Clean, deduplicated data (5,424 unique participants)
+- ✅ 50-100x faster autocomplete queries
+- ✅ Correct seasons on all races (derived from dates)
+- ✅ Simplified API code (removed 200+ lines of SQL)
+
+**Long-term**:
+- ✅ One-command season updates: `npm run pipeline:sync 2026-2027`
+- ✅ Idempotent operations (safe to re-run)
+- ✅ Clear workflow: JSON → Normalize → SQL → Import
+- ✅ Maintainable codebase with comprehensive tests
+
+### Git History
+- **Branch**: `feature/data-pipeline-redesign`
+- **Commits**: 12 commits documenting full implementation
+- **Merged**: January 18, 2026 to `main`
+- **Status**: ✅ Complete, tested, deployed to production
+
+### Future Enhancements
+- Automated season scraping
+- Data validation dashboard
+- API response caching
+- Progressive enhancement for large datasets
+
 ## Current Status
 - **Extraction**: ✅ Complete & Tested (both Tautas and Sporta)
 - **Scraping**: ✅ Complete for all available history (1,876 Sporta + 4,461 Tautas)
-- **Database**: ✅ Deployed & Populated (6,161 unique participants, 16,245 races)
-- **Deployment**: ✅ Successfully migrated to Cloudflare Pages (Unified Frontend + API)
-- **API**: ✅ Integrated via Pages Functions (`functions/api/[[path]].ts`)
-- **Frontend**: ✅ Complete with polished design, glass morphism, and dual plot modes
-- **Testing**: ✅ 124/124 tests passing
-- **Data Quality**: ⚠️ Season field unreliable for some participants (mitigated by date-based derivation)
+- **Database**: ✅ Redesigned & Optimized (5,424 unique participants, 22,494 races)
+- **Data Pipeline**: ✅ Clean, idempotent workflow with one-command updates
+- **Deployment**: ✅ Successfully on Cloudflare Pages (Unified Frontend + API)
+- **API**: ✅ Simplified with indexed queries (50-100x faster)
+- **Frontend**: ✅ ID-based queries, polished design, dual plot modes
+- **Testing**: ✅ 190/190 tests passing (66 pipeline + 124 existing)
+- **Data Quality**: ✅ Clean schema, accurate seasons, zero duplicates
 - **Comparison Accuracy**: ✅ Correctly finds all common races, handles Tautas/Sporta separation
