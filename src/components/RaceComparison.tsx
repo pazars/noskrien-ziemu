@@ -624,19 +624,7 @@ export default function RaceComparison() {
                     </div>
 
                     {/* Chart Container */}
-                    <div style={{
-                        flex: 1,
-                        width: '100%',
-                        background: 'rgba(255, 255, 255, 0.6)',
-                        backdropFilter: 'blur(8px)',
-                        borderRadius: '24px',
-                        padding: '8px 12px 12px',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
-                        border: '1px solid rgba(226, 232, 240, 0.5)',
-                        minHeight: 0,
-                        display: 'flex',
-                        flexDirection: 'column'
-                    }}>
+                    <div className="chart-container">
                         <div style={{ flex: 1, width: '100%', minHeight: 0 }}>
                             <ResponsiveContainer width="100%" height="100%" key={chartKey}>
                                 <LineChart
