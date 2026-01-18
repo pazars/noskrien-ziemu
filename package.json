@@ -9,7 +9,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "generate:og": "node scripts/generate-og-image-simple.js"
+    "generate:og": "node scripts/generate-og-image-simple.js",
+    "pipeline:normalize": "tsx scripts/pipeline/2-normalize-data.ts",
+    "pipeline:generate-sql": "tsx scripts/pipeline/3-generate-sql.ts",
+    "pipeline:sync": "./scripts/pipeline/sync-new-season.sh",
+    "pipeline:rebuild": "./scripts/pipeline/rebuild-from-scratch.sh"
   },
   "dependencies": {
     "lucide-react": "^0.562.0",
