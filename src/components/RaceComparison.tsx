@@ -318,6 +318,7 @@ export default function RaceComparison() {
     const [chartData, setChartData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [plotMode, setPlotMode] = useState<'difference' | 'individual'>('difference');
+    const [chartKey, setChartKey] = useState(0);
 
     // Display names that may be swapped to show faster runner first
     const [displayP1Name, setDisplayP1Name] = useState<string | null>(null);
@@ -330,6 +331,27 @@ export default function RaceComparison() {
     const allSeasons = useMemo(() => {
         return [...new Set(chartData.map(d => d.season))].sort();
     }, [chartData]);
+
+    // Responsive chart margins and settings based on screen size
+    const chartMargins = useMemo(() => {
+        const width = window.innerWidth;
+        if (width < 480) {
+            return { top: 15, right: 10, left: 35, bottom: 50 };
+        } else if (width < 768) {
+            return { top: 15, right: 20, left: 40, bottom: 45 };
+        }
+        return { top: 20, right: 30, left: 50, bottom: 40 };
+    }, [chartKey]); // Re-compute on resize
+
+    const tickFontSize = useMemo(() => {
+        const width = window.innerWidth;
+        return width < 480 ? 9 : width < 768 ? 10 : 11;
+    }, [chartKey]);
+
+    const labelFontSize = useMemo(() => {
+        const width = window.innerWidth;
+        return width < 480 ? 10 : width < 768 ? 11 : 12;
+    }, [chartKey]);
 
     // Compute Y-axis ticks for difference plot (every 15s or 30s depending on range)
     const { differenceTicks, differenceInterval } = useMemo(() => {
@@ -356,6 +378,21 @@ export default function RaceComparison() {
         }
         return ticks;
     }, [chartData]);
+
+    // Handle screen rotation and resize - force chart to re-render
+    useEffect(() => {
+        const handleResize = () => {
+            setChartKey(prev => prev + 1);
+        };
+
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('orientationchange', handleResize);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('orientationchange', handleResize);
+        };
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -417,28 +454,10 @@ export default function RaceComparison() {
 
 
     return (
-        <div style={{
-            height: '100vh',
-            width: '100%',
-            maxWidth: '100vw',
-            overflow: 'hidden',
-            padding: '16px 24px 8px',
-            display: 'flex',
-            flexDirection: 'column',
-            boxSizing: 'border-box'
-        }}>
+        <div className="race-comparison-container">
             {/* Header - logo left, toggle centered */}
-            <header style={{
-                marginBottom: '8px',
-                paddingLeft: '8px',
-                paddingRight: '8px',
-                paddingTop: '4px',
-                flexShrink: 0,
-                display: 'grid',
-                gridTemplateColumns: 'minmax(180px, 1fr) auto minmax(180px, 1fr)',
-                alignItems: 'center'
-            }}>
-                <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '4px' }}>
+            <header className="race-comparison-header">
+                <div className="header-logo">
                     <a
                         href="https://noskrienziemu.lv"
                         target="_blank"
@@ -461,35 +480,19 @@ export default function RaceComparison() {
                         <img
                             src="/LOGO-NZ-PNG.png"
                             alt="Noskrien Ziemu"
-                            style={{ height: '40px', width: 'auto', maxWidth: '180px', objectFit: 'contain', display: 'block' }}
+                            className="header-logo-img"
                         />
                     </a>
                 </div>
                 <CategoryToggle value={category} onChange={setCategory} />
-                <div /> {/* Spacer for centering toggle */}
+                <div className="header-spacer" />
             </header>
 
             {/* Participant Selection */}
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px',
-                maxWidth: '800px',
-                margin: '0 auto',
-                width: '100%',
-                marginBottom: '4px',
-                padding: '0 16px',
-                flexShrink: 0
-            }}>
-
+            <div className="participant-selection-container">
                 {/* Search inputs row */}
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    gap: '24px',
-                    alignItems: 'center'
-                }}>
-                    <div style={{ flex: 1 }}>
+                <div className="participant-selection-row">
+                    <div className="participant-selector-wrapper">
                         <ParticipantSelector
                             label="1. dalībnieks"
                             onSelect={setP1}
@@ -499,25 +502,13 @@ export default function RaceComparison() {
                         />
                     </div>
 
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingTop: '24px'
-                    }}>
-                        <div className="glass" style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}>
+                    <div className="vs-divider">
+                        <div className="glass vs-badge">
                             <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>VS</span>
                         </div>
                     </div>
 
-                    <div style={{ flex: 1 }}>
+                    <div className="participant-selector-wrapper">
                         <ParticipantSelector
                             label="2. dalībnieks"
                             onSelect={setP2}
@@ -647,10 +638,10 @@ export default function RaceComparison() {
                         flexDirection: 'column'
                     }}>
                         <div style={{ flex: 1, width: '100%', minHeight: 0 }}>
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" key={chartKey}>
                                 <LineChart
                                     data={chartData}
-                                    margin={{ top: 20, right: 30, left: 50, bottom: 40 }}
+                                    margin={chartMargins}
                                 >
                                     <defs>
                                         <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -686,7 +677,7 @@ export default function RaceComparison() {
                                     <XAxis
                                         dataKey="race"
                                         stroke="#CBD5E1"
-                                        tick={{ fill: '#64748B', fontSize: 11 }}
+                                        tick={{ fill: '#64748B', fontSize: tickFontSize }}
                                         tickLine={{ stroke: '#CBD5E1' }}
                                         axisLine={{ stroke: '#CBD5E1' }}
                                         angle={-30}
@@ -698,7 +689,7 @@ export default function RaceComparison() {
                                     {plotMode === 'difference' ? (
                                         <YAxis
                                             stroke="#CBD5E1"
-                                            tick={{ fill: '#64748B', fontSize: 11 }}
+                                            tick={{ fill: '#64748B', fontSize: tickFontSize }}
                                             tickLine={{ stroke: '#CBD5E1' }}
                                             axisLine={{ stroke: '#CBD5E1' }}
                                             domain={[
@@ -721,14 +712,14 @@ export default function RaceComparison() {
                                                 angle: -90,
                                                 position: 'center',
                                                 fill: '#64748B',
-                                                fontSize: 12,
+                                                fontSize: labelFontSize,
                                                 dx: -20
                                             }}
                                         />
                                     ) : (
                                         <YAxis
                                             stroke="#CBD5E1"
-                                            tick={{ fill: '#64748B', fontSize: 11 }}
+                                            tick={{ fill: '#64748B', fontSize: tickFontSize }}
                                             tickLine={{ stroke: '#CBD5E1' }}
                                             axisLine={{ stroke: '#CBD5E1' }}
                                             domain={[
@@ -746,7 +737,7 @@ export default function RaceComparison() {
                                                 angle: -90,
                                                 position: 'center',
                                                 fill: '#64748B',
-                                                fontSize: 12,
+                                                fontSize: labelFontSize,
                                                 dx: -20
                                             }}
                                         />
