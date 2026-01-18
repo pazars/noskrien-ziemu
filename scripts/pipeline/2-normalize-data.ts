@@ -85,7 +85,7 @@ export function normalizeData(dataDir: string): {
         const content = fs.readFileSync(filePath, 'utf-8');
         const participants: Participant[] = JSON.parse(content);
 
-        const gender = file.includes('men') ? 'V' : (file.includes('women') ? 'S' : 'U');
+        const gender = file.includes('women') ? 'S' : (file.includes('men') ? 'V' : 'U');
 
         for (const p of participants) {
           totalParticipants++;
@@ -140,16 +140,8 @@ export function normalizeData(dataDir: string): {
       }
     }
 
-    // Create merged participant (use first occurrence's metadata)
-    const firstOccurrence = group[0];
-    const mergedParticipant: Participant = {
-      name: canonicalName,
-      link: firstOccurrence.link,
-      races: allRaces,
-      normalized_name: normalized
-    };
-
-    // Group by file for writing back
+    // Group races by file location (season/distance/gender)
+    const racesByFile = new Map<string, Race[]>();
     for (const participant of group) {
       const season = participant.season;
       const distance = participant.distance;
@@ -157,21 +149,43 @@ export function normalizeData(dataDir: string): {
       const fileName = gender === 'V' ? 'results_men.json' : 'results_women.json';
       const filePath = path.join(dataDir, season, distance, fileName);
 
+      if (!racesByFile.has(filePath)) {
+        racesByFile.set(filePath, []);
+      }
+
+      // Add this participant's races (with season field added)
+      for (const race of participant.races) {
+        racesByFile.get(filePath)!.push({
+          ...race,
+          season: deriveSeasonFromDate(race.Datums)
+        });
+      }
+    }
+
+    // Create participant entry for each file with only relevant races
+    const firstOccurrence = group[0];
+    for (const [filePath, races] of racesByFile.entries()) {
       if (!processedFiles.has(filePath)) {
         processedFiles.set(filePath, []);
       }
 
-      // Only add once per file (avoid duplicates in same file)
-      const existing = processedFiles.get(filePath)!;
-      const alreadyExists = existing.some(p => p.normalized_name === normalized);
-      if (!alreadyExists) {
-        processedFiles.get(filePath)!.push(mergedParticipant);
-      }
+      const participantForFile: Participant = {
+        name: canonicalName,
+        link: firstOccurrence.link,
+        races: races,
+        normalized_name: normalized
+      };
+
+      processedFiles.get(filePath)!.push(participantForFile);
     }
   }
 
   // Step 3: Write back to files
+  console.log(`\nWriting normalized data to ${processedFiles.size} files...`);
   for (const [filePath, participants] of processedFiles.entries()) {
+    const sampleParticipant = participants[0];
+    const hasNormalizedName = sampleParticipant && 'normalized_name' in sampleParticipant;
+    console.log(`  ${path.basename(path.dirname(filePath))}/${path.basename(filePath)}: ${participants.length} participants (normalized_name: ${hasNormalizedName})`);
     fs.writeFileSync(filePath, JSON.stringify(participants, null, 2));
   }
 
