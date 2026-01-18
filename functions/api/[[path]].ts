@@ -73,7 +73,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         try {
             // Get participant data
             const participant = await env.DB.prepare(`
-                SELECT id, name, gender, distance, season, normalized_name
+                SELECT id, name, gender, distance, normalized_name
                 FROM participants
                 WHERE id = ?
             `).bind(id).first();

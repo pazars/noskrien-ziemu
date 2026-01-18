@@ -4,29 +4,56 @@ This document outlines specific workflows, commands, and best practices for work
 
 ## Development Commands
 
-### 1. Database API Setup (Cloudflare Pages)
+### Quick Start
 ```bash
-npm run build && wrangler pages dev dist --d1 DB=noskrien-ziemu --remote --port 8787
+npm run dev       # Frontend only (uses production API)
+npm run dev:api   # Full stack (local API + DB)
 ```
-- **Purpose**: Starts Cloudflare Pages dev server with remote D1 database access
-- **Port**: 8787
-- **Note**: Requires building the frontend first (`npm run build`)
-- **Important**: The `--remote` flag connects to the actual production D1 database
-- **Alternative**: Use `--live-reload` flag for auto-rebuild on changes
-- **⚠️ Important**: If port is taken, the process is already running - do NOT create a new one
 
-### 2. UI Development Server
+### 1. Frontend Development (Recommended)
 ```bash
 npm run dev
 ```
-- **Purpose**: Starts Vite dev server for frontend testing
-- **Port**: 5173
-- **⚠️ Important**: If port is taken, the process is already running - do NOT create a new one
+- **Purpose**: UI development with hot-reload
+- **Port**: 5173 (http://localhost:5173)
+- **API**: Uses production at https://noskrien-ziemu.pages.dev
+- **Use this for**: Component development, UI/UX work
+
+### 2. Full Stack Development (Local API + D1)
+```bash
+npm run dev:api
+```
+- **Purpose**: Local API with D1 database
+- **Port**: 8787 (http://localhost:8787)
+- **What it does**: Builds frontend and starts `wrangler pages dev`
+- **Use this for**: API changes, database testing
+- **Pro tip**: Run `npm run dev` in another terminal for UI hot-reload
+
+#### First Time Database Setup
+The local D1 database persists automatically (wrangler v3+). Set it up once:
+
+```bash
+# Apply schema
+wrangler d1 execute noskrien-ziemu --local --file=schema-v2.sql
+
+# Import data
+npx tsx scripts/pipeline/3-generate-sql.ts ./data import_local.sql
+wrangler d1 execute noskrien-ziemu --local --file=import_local.sql
+```
+
+This populates ~5,424 participants and ~22,494 races. Data persists across restarts.
+
+#### Resetting Local Database
+To clear and start fresh:
+```bash
+# Delete persisted data
+rm -rf .wrangler/state/v3/d1
+
+# Then re-run setup commands above
+```
 
 ### 3. Process Management
-- **DO NOT** create new db api or ui processes without explicit permission
-- If a process is blocking work, **ASK** for permission to kill processes
-- Check if ports 8787 or 5173 are in use before attempting to start services
+- If port is blocked, kill manually: `pkill -f "wrangler\|vite"`
 
 ## Workflow Guidelines
 

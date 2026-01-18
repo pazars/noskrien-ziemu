@@ -5,7 +5,8 @@ compatibility_date = "2024-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "noskrien-ziemu"
-database_id = "3e20662e-4a17-4e39-b4cf-fa543282830e"
+database_id = "15ae24f4-e68e-4aa3-886f-2a55ffa2e63c"
+preview_database_id = "DB"  # Required for Pages local development
 
 [dev]
 port = 8787

@@ -28,8 +28,11 @@ dist-ssr
 data
 results.json
 import_data.sql
+import_data_local.sql
 raceplot.jsx
 
 .playwright-mcp
 .claude
 .worktrees
+deprecated
+docs

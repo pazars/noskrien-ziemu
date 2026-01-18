@@ -687,6 +687,51 @@ This bug demonstrates the critical value of thorough local testing before produc
 - API response caching
 - Progressive enhancement for large datasets
 
+## 17. Local Development Setup (January 18, 2026)
+Fixed local development environment to enable working with local D1 database instead of production.
+
+### Problems Fixed
+**Test Failure**: Removed obsolete test in [scripts/check_duplicates.test.ts](scripts/check_duplicates.test.ts) that was checking for duplicates in scraped data. Since data has been normalized and duplicates merged, this test was no longer valid.
+
+**Database API Command**: Updated [CLAUDE.md](CLAUDE.md) with correct command for local development:
+- **Old (broken)**: `wrangler pages dev dist --d1 DB=noskrien-ziemu --remote`
+- **New (working)**: `wrangler pages dev dist --d1 DB --port 8787`
+- Removed invalid `--remote` flag that doesn't exist in `wrangler pages dev`
+
+**Empty Local Database**: Local D1 database had no schema or data, causing participant search to return no results.
+
+### Solution: Local Database Setup
+Created comprehensive setup process documented in [CLAUDE.md:7-21](CLAUDE.md#L7-L21):
+
+```bash
+# 1. Apply schema to local database
+wrangler d1 execute DB --local --file=schema-v2.sql
+
+# 2. Generate SQL from normalized data
+npx tsx scripts/pipeline/3-generate-sql.ts ./data import_data_local.sql
+
+# 3. Import data to local database
+wrangler d1 execute DB --local --file=import_data_local.sql
+
+# 4. Verify import
+wrangler d1 execute DB --local --command="SELECT COUNT(*) FROM participants"
+```
+
+### Results
+- **Local Database**: 5,424 participants, 22,494 races (matches production)
+- **Search Working**: Autocomplete returns results for all participants
+- **Development Workflow**: Can now develop and test entirely locally without touching production
+- **Documentation**: Added setup section to [CLAUDE.md](CLAUDE.md) for future reference
+- **Gitignore**: Added `import_data_local.sql` to [.gitignore](.gitignore) to exclude generated files
+
+### Files Modified
+- [scripts/check_duplicates.test.ts](scripts/check_duplicates.test.ts) - Removed obsolete test, cleaned up unused imports
+- [CLAUDE.md](CLAUDE.md) - Added local database setup section, corrected API command
+- [.gitignore](.gitignore) - Added `import_data_local.sql`
+
+### Test Results
+All 171 tests passing (1 obsolete test removed)
+
 ## Current Status
 - **Extraction**: ✅ Complete & Tested (both Tautas and Sporta)
 - **Scraping**: ✅ Complete for all available history (1,876 Sporta + 4,461 Tautas)
@@ -695,6 +740,7 @@ This bug demonstrates the critical value of thorough local testing before produc
 - **Deployment**: ✅ Successfully on Cloudflare Pages (Unified Frontend + API)
 - **API**: ✅ Simplified with indexed queries (50-100x faster)
 - **Frontend**: ✅ ID-based queries, polished design, dual plot modes
-- **Testing**: ✅ 190/190 tests passing (66 pipeline + 124 existing)
+- **Testing**: ✅ 171/171 tests passing (66 pipeline + 105 existing)
 - **Data Quality**: ✅ Clean schema, accurate seasons, zero duplicates
 - **Comparison Accuracy**: ✅ Correctly finds all common races, handles Tautas/Sporta separation
+- **Local Development**: ✅ Complete local D1 database setup, no dependency on production

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "npm run build && wrangler pages dev dist --port 8787",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",

@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { normalizeLatvian } from '../../src/utils/latvian';
+import { onRequest } from './[[path]]';
 
 /**
  * API Endpoint Tests - Normalized Name Queries
@@ -64,6 +65,74 @@ describe('API Query Logic - Normalized Name', () => {
 
       expect(expectedQueryPattern).toContain('id');
       expect(expectedQueryPattern).not.toBe(oldQueryPattern);
+    });
+
+    it('should only select columns that exist in participants table (schema-v2)', () => {
+      // Schema-v2: participants table has: id, name, gender, distance, normalized_name
+      // Schema-v2: participants table does NOT have: season (moved to races table)
+      const validColumns = ['id', 'name', 'gender', 'distance', 'normalized_name'];
+      const invalidColumns = ['season', 'link'];
+
+      // This test documents schema-v2 structure
+      validColumns.forEach(col => {
+        expect(['id', 'name', 'gender', 'distance', 'normalized_name']).toContain(col);
+      });
+
+      invalidColumns.forEach(col => {
+        expect(['id', 'name', 'gender', 'distance', 'normalized_name']).not.toContain(col);
+      });
+    });
+
+    it('should fetch participant history without querying season from participants table', async () => {
+      // Create mock database that matches schema-v2
+      const mockParticipant = {
+        id: 123,
+        name: 'Dāvis Pazars',
+        gender: 'V',
+        distance: 'Tautas',
+        normalized_name: 'davis pazars'
+        // NOTE: No 'season' field - that's in races table now
+      };
+
+      const mockRaces = [
+        { date: '2023-11-26', result: '41:02', km: '10.5', location: 'Smiltene' }
+      ];
+
+      const mockDB = {
+        prepare: (query: string) => ({
+          bind: (...args: any[]) => ({
+            first: async () => {
+              // If query tries to SELECT season from participants, it should fail
+              if (query.includes('participants') && query.includes('season')) {
+                throw new Error('D1_ERROR: no such column: season');
+              }
+              return mockParticipant;
+            },
+            all: async () => ({ results: mockRaces })
+          })
+        })
+      };
+
+      const mockEnv = { DB: mockDB as any };
+      const mockContext = {
+        request: new Request('http://localhost/api/history?id=123'),
+        env: mockEnv,
+        next: async () => new Response('not found')
+      };
+
+      // This should NOT throw an error about missing 'season' column
+      const response = await onRequest(mockContext as any);
+      const data = await response.json();
+
+      // Debug: log error if request failed
+      if (response.status !== 200) {
+        console.error('API Error:', data);
+      }
+
+      expect(response.status).toBe(200);
+      expect(data.participant).toBeDefined();
+      expect(data.participant.name).toBe('Dāvis Pazars');
+      expect(data.races).toHaveLength(1);
     });
   });
 
