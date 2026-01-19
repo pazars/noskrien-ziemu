@@ -112,6 +112,46 @@ export function normalizeData(dataDir: string): {
 
   console.log(`Loaded ${totalParticipants} participants across all seasons`);
 
+  // Step 1.5: Fix cross-gender duplicates
+  // If a name exists in BOTH men's and women's files for the same distance,
+  // merge the men's records into women's (women's file is authoritative) and remove from men's
+  let crossGenderMerges = 0;
+  const keysToRemove: string[] = [];
+
+  for (const [key, group] of registry.entries()) {
+    const [normalized, distance, gender] = key.split('|');
+
+    // Only process men's entries - check if same name exists in women's file
+    if (gender === 'V') {
+      const womenKey = `${normalized}|${distance}|S`;
+      if (registry.has(womenKey)) {
+        // This is a cross-gender duplicate - merge men's races into women's
+        const womenGroup = registry.get(womenKey)!;
+
+        // Move all men's races to women's group
+        for (const menRecord of group) {
+          womenGroup.push({
+            ...menRecord,
+            gender: 'S' // Change gender to S so it writes to women's file
+          });
+        }
+
+        // Mark men's key for removal
+        keysToRemove.push(key);
+        crossGenderMerges += group.length;
+      }
+    }
+  }
+
+  // Remove the cross-gender duplicate keys
+  for (const key of keysToRemove) {
+    registry.delete(key);
+  }
+
+  if (crossGenderMerges > 0) {
+    console.log(`Fixed ${crossGenderMerges} cross-gender duplicates (moved to women's files)`);
+  }
+
   // Step 2: Merge duplicates and write back
   let mergedCount = 0;
   const processedFiles = new Map<string, Participant[]>();

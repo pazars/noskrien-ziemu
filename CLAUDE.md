@@ -2,6 +2,8 @@
 
 This document outlines specific workflows, commands, and best practices for working on this project with Claude Code.
 
+Read AGENTS.md to understand development timeline.
+
 ## Development Commands
 
 ### Quick Start

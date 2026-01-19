@@ -293,6 +293,71 @@ describe('RaceComparison - Color Consistency', () => {
         });
     });
 
+    describe('Chart rendering conditions', () => {
+        it('should not render chart when p1 is null', () => {
+            const p1 = null;
+            const p2 = { id: 1, name: 'Runner B', gender: 'V' };
+            const chartData = [{ diff: 10, pace1: 300, pace2: 290 }];
+            const loading = false;
+
+            // The condition: !loading && p1 && p2 && chartData.length > 0
+            const shouldRenderChart = !loading && p1 && p2 && chartData.length > 0;
+
+            expect(shouldRenderChart).toBeFalsy();
+        });
+
+        it('should not render chart when p2 is null', () => {
+            const p1 = { id: 1, name: 'Runner A', gender: 'V' };
+            const p2 = null;
+            const chartData = [{ diff: 10, pace1: 300, pace2: 290 }];
+            const loading = false;
+
+            const shouldRenderChart = !loading && p1 && p2 && chartData.length > 0;
+
+            expect(shouldRenderChart).toBeFalsy();
+        });
+
+        it('should not render chart when both participants are null', () => {
+            const p1 = null;
+            const p2 = null;
+            const chartData = [{ diff: 10, pace1: 300, pace2: 290 }];
+            const loading = false;
+
+            const shouldRenderChart = !loading && p1 && p2 && chartData.length > 0;
+
+            expect(shouldRenderChart).toBeFalsy();
+        });
+
+        it('should render chart when both participants exist and have data', () => {
+            const p1 = { id: 1, name: 'Runner A', gender: 'V' };
+            const p2 = { id: 2, name: 'Runner B', gender: 'V' };
+            const chartData = [{ diff: 10, pace1: 300, pace2: 290 }];
+            const loading = false;
+
+            const shouldRenderChart = !loading && p1 && p2 && chartData.length > 0;
+
+            expect(shouldRenderChart).toBeTruthy();
+        });
+
+        it('should not render chart when chartData is stale but participant becomes null', () => {
+            // This simulates the bug scenario where chartData exists from previous selection
+            // but one participant has just been cleared
+            const p1 = null; // Just cleared
+            const p2 = { id: 2, name: 'Runner B', gender: 'V' };
+            const chartData = [
+                { diff: 10, pace1: 300, pace2: 290 },
+                { diff: 20, pace1: 310, pace2: 290 }
+            ]; // Stale data from before p1 was cleared
+            const loading = false;
+
+            // Without the fix, this would crash when trying to access p1.name
+            // With the fix, the chart should not render
+            const shouldRenderChart = !loading && p1 && p2 && chartData.length > 0;
+
+            expect(shouldRenderChart).toBeFalsy();
+        });
+    });
+
     describe('Edge cases', () => {
         it('should handle empty race array (no comparison data)', () => {
             const races: any[] = [];

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useState, useRef, useMemo } from 'react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, ReferenceLine
@@ -138,7 +138,7 @@ const CategoryToggle = ({ value, onChange }: { value: string; onChange: (v: stri
     const sportaRef = useRef<HTMLSpanElement>(null);
     const [sliderStyle, setSliderStyle] = useState({ left: 4, width: 0 });
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         const activeRef = value === 'Tautas' ? tautasRef : sportaRef;
         if (activeRef.current) {
             setSliderStyle({
@@ -181,7 +181,7 @@ const PlotModeToggle = ({ value, onChange }: { value: 'difference' | 'individual
     const indivRef = useRef<HTMLSpanElement>(null);
     const [sliderStyle, setSliderStyle] = useState({ left: 4, width: 0 });
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         const activeRef = value === 'difference' ? diffRef : indivRef;
         if (activeRef.current) {
             setSliderStyle({
@@ -336,11 +336,11 @@ export default function RaceComparison() {
     const chartMargins = useMemo(() => {
         const width = window.innerWidth;
         if (width < 480) {
-            return { top: 15, right: 10, left: 35, bottom: 50 };
+            return { top: 10, right: 5, left: 35, bottom: 50 };
         } else if (width < 768) {
-            return { top: 15, right: 20, left: 40, bottom: 45 };
+            return { top: 10, right: 8, left: 40, bottom: 45 };
         }
-        return { top: 20, right: 30, left: 50, bottom: 40 };
+        return { top: 15, right: 10, left: 50, bottom: 40 };
     }, [chartKey]); // Re-compute on resize
 
     const tickFontSize = useMemo(() => {
@@ -603,7 +603,7 @@ export default function RaceComparison() {
             )}
 
             {/* Chart */}
-            {!loading && chartData.length > 0 && (
+            {!loading && p1 && p2 && chartData.length > 0 && (
                 <div style={{
                     flex: 1,
                     display: 'flex',

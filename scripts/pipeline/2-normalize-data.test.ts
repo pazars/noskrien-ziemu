@@ -105,5 +105,99 @@ describe('Data normalization', () => {
       expect(normalizedData[0].races[0].season).toBe('2023-2024');
       expect(normalizedData[0].races[1].season).toBe('2023-2024');
     });
+
+    it('should keep participants in their original gender files only', () => {
+      // Setup: men and women files with distinct participants
+      const menFile = `${testDataDir}/2023-2024/Tautas/results_men.json`;
+      const womenFile = `${testDataDir}/2023-2024/Tautas/results_women.json`;
+
+      const menParticipants = [
+        {
+          name: 'Jānis Bērziņš',
+          link: 'http://example.com/men/1',
+          races: [{ Datums: '2023-11-26', Rezultāts: '35:00', km: '10,5', Vieta: 'Smiltene' }]
+        }
+      ];
+      const womenParticipants = [
+        {
+          name: 'Anete Švilpe',
+          link: 'http://example.com/women/1',
+          races: [{ Datums: '2023-11-26', Rezultāts: '45:00', km: '10,5', Vieta: 'Smiltene' }]
+        }
+      ];
+
+      fs.writeFileSync(menFile, JSON.stringify(menParticipants, null, 2));
+      fs.writeFileSync(womenFile, JSON.stringify(womenParticipants, null, 2));
+
+      normalizeData(testDataDir);
+
+      // After normalization, men's file should only have men, women's file only women
+      const normalizedMen = JSON.parse(fs.readFileSync(menFile, 'utf-8'));
+      const normalizedWomen = JSON.parse(fs.readFileSync(womenFile, 'utf-8'));
+
+      expect(normalizedMen).toHaveLength(1);
+      expect(normalizedMen[0].name).toBe('Jānis Bērziņš');
+
+      expect(normalizedWomen).toHaveLength(1);
+      expect(normalizedWomen[0].name).toBe('Anete Švilpe');
+
+      // Verify no cross-contamination
+      const menNames = normalizedMen.map((p: { normalized_name: string }) => p.normalized_name);
+      const womenNames = normalizedWomen.map((p: { normalized_name: string }) => p.normalized_name);
+
+      const overlap = menNames.filter((name: string) => womenNames.includes(name));
+      expect(overlap).toHaveLength(0);
+    });
+
+    it('should not write women to men files when normalizing corrupted data', () => {
+      // This test simulates the bug: a woman appearing in both men's and women's files
+      // After normalization, she should ONLY be in the women's file
+      const menFile = `${testDataDir}/2023-2024/Tautas/results_men.json`;
+      const womenFile = `${testDataDir}/2023-2024/Tautas/results_women.json`;
+
+      // Corrupted state: Anete appears in BOTH files (this is the bug)
+      const corruptedMenParticipants = [
+        {
+          name: 'Jānis Bērziņš',
+          link: 'http://example.com/men/1',
+          races: [{ Datums: '2023-11-26', Rezultāts: '35:00', km: '10,5', Vieta: 'Smiltene' }]
+        },
+        {
+          name: 'Anete Švilpe', // BUG: woman in men's file
+          link: 'http://example.com/women/1',
+          races: [{ Datums: '2023-11-26', Rezultāts: '45:00', km: '10,5', Vieta: 'Smiltene' }],
+          normalized_name: 'anete svilpe'
+        }
+      ];
+      const womenParticipants = [
+        {
+          name: 'Anete Švilpe',
+          link: 'http://example.com/women/1',
+          races: [{ Datums: '2023-12-10', Rezultāts: '44:00', km: '10,5', Vieta: 'Cēsis' }],
+          normalized_name: 'anete svilpe'
+        }
+      ];
+
+      fs.writeFileSync(menFile, JSON.stringify(corruptedMenParticipants, null, 2));
+      fs.writeFileSync(womenFile, JSON.stringify(womenParticipants, null, 2));
+
+      normalizeData(testDataDir);
+
+      const normalizedMen = JSON.parse(fs.readFileSync(menFile, 'utf-8'));
+      const normalizedWomen = JSON.parse(fs.readFileSync(womenFile, 'utf-8'));
+
+      // Men's file should NOT contain Anete
+      const aneteInMen = normalizedMen.find((p: { name: string }) =>
+        p.name.toLowerCase().includes('anete')
+      );
+      expect(aneteInMen).toBeUndefined();
+
+      // Women's file should contain Anete with merged races
+      const aneteInWomen = normalizedWomen.find((p: { name: string }) =>
+        p.name.toLowerCase().includes('anete')
+      );
+      expect(aneteInWomen).toBeDefined();
+      expect(aneteInWomen.races).toHaveLength(2); // Both races merged
+    });
   });
 });
