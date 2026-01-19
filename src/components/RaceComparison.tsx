@@ -406,10 +406,27 @@ export default function RaceComparison() {
 
             setLoading(true);
             try {
-                const [hist1, hist2] = await Promise.all([
-                    fetch(`/api/history?id=${p1.id}`).then(res => res.json()) as Promise<HistoryResponse>,
-                    fetch(`/api/history?id=${p2.id}`).then(res => res.json()) as Promise<HistoryResponse>
+                const [response1, response2] = await Promise.all([
+                    fetch(`/api/history?id=${p1.id}`).then(res => res.json()) as Promise<any>,
+                    fetch(`/api/history?id=${p2.id}`).then(res => res.json()) as Promise<any>
                 ]);
+
+                // Transform API response to HistoryResponse format and add category field to races
+                const hist1: HistoryResponse = {
+                    name: response1.participant.name,
+                    races: response1.races.map((race: any) => ({
+                        ...race,
+                        category: response1.participant.distance
+                    }))
+                };
+
+                const hist2: HistoryResponse = {
+                    name: response2.participant.name,
+                    races: response2.races.map((race: any) => ({
+                        ...race,
+                        category: response2.participant.distance
+                    }))
+                };
 
                 let commonRaces = compareRaces(hist1, hist2, category);
                 let finalP1Name = p1.name;

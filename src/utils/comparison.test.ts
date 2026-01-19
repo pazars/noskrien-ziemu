@@ -265,4 +265,44 @@ describe('compareRaces', () => {
         const uniqueSeasons = [...new Set(matches.map(m => m.season))];
         expect(uniqueSeasons).toHaveLength(2);
     });
+
+    it('should find Sporta distance races (Klāvs Stankevics vs Andis Sakne regression)', () => {
+        // Real-world test case: These two participants have 5 common Sporta races
+        // Bug: API doesn't return category field, so comparison logic defaults to 'Tautas'
+        // causing Sporta races to not match when filtering by 'Sporta'
+        const hist1: HistoryResponse = {
+            name: 'Klāvs Stankevics',
+            races: [
+                { date: '2023-01-08', result: '1:14:14', km: '18.70', location: 'Salacgrīva', season: '2022-2023', category: 'Sporta' },
+                { date: '2023-01-28', result: '1:15:20', km: '18.60', location: 'Koknese', season: '2022-2023', category: 'Sporta' },
+                { date: '2025-11-23', result: '1:19:43', km: '20.40', location: 'Jaunpiebalga', season: '2025-2026', category: 'Sporta' },
+                { date: '2025-12-14', result: '1:17:22', km: '19.80', location: 'Jaunolaine', season: '2025-2026', category: 'Sporta' },
+                { date: '2026-01-10', result: '1:24:38', km: '20.20', location: 'Sigulda', season: '2025-2026', category: 'Sporta' }
+            ]
+        };
+
+        const hist2: HistoryResponse = {
+            name: 'Andis Sakne',
+            races: [
+                { date: '2023-01-08', result: '1:13:45', km: '18.70', location: 'Salacgrīva', season: '2022-2023', category: 'Sporta' },
+                { date: '2023-01-28', result: '1:17:08', km: '18.60', location: 'Koknese', season: '2022-2023', category: 'Sporta' },
+                { date: '2025-11-23', result: '1:20:48', km: '20.40', location: 'Jaunpiebalga', season: '2025-2026', category: 'Sporta' },
+                { date: '2025-12-14', result: '1:18:17', km: '19.80', location: 'Jaunolaine', season: '2025-2026', category: 'Sporta' },
+                { date: '2026-01-10', result: '1:25:14', km: '20.20', location: 'Sigulda', season: '2025-2026', category: 'Sporta' }
+            ]
+        };
+
+        const matches = compareRaces(hist1, hist2, 'Sporta');
+
+        // Should find all 5 common races
+        expect(matches).toHaveLength(5);
+
+        // Verify first match
+        const salacgriva = matches.find(m => m.date === '2023-01-08');
+        expect(salacgriva).toBeDefined();
+        expect(salacgriva?.race).toBe('Salacgrīva');
+        expect(salacgriva?.p1Time).toBe('1:14:14');
+        expect(salacgriva?.p2Time).toBe('1:13:45');
+    });
 });
+
